@@ -1,6 +1,7 @@
 "use client"
-
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Navigation } from "@/components/navigation"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturesSection } from "@/components/features-section"
@@ -8,6 +9,31 @@ import Scene3D from "@/components/3d/scene"
 import Loading3D from "@/components/3d/loading"
 
 export default function HomePage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/dashboard")
+    }
+  }, [status, router])
+
+  if (status === "loading") {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900 overflow-x-hidden flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </main>
+    )
+  }
+
+  if (status === "authenticated") {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900 overflow-x-hidden flex items-center justify-center">
+        <div className="text-white">Redirecting to dashboard...</div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900 overflow-x-hidden">
       {/* 3D Background */}
