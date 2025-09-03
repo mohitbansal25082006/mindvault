@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { 
   ArrowLeft, 
-  FileText, 
   Calendar, 
   Tag, 
   Search, 
@@ -50,12 +49,7 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
   const [highlights, setHighlights] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState("document")
 
-  useEffect(() => {
-    fetchDocument()
-    fetchRelatedDocuments()
-  }, [documentId])
-
-  const fetchDocument = async () => {
+  const fetchDocument = useCallback(async () => {
     try {
       const response = await fetch(`/api/documents/${documentId}`)
       if (response.ok) {
@@ -69,9 +63,9 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [documentId])
 
-  const fetchRelatedDocuments = async () => {
+  const fetchRelatedDocuments = useCallback(async () => {
     try {
       const response = await fetch(`/api/documents/related/${documentId}`)
       if (response.ok) {
@@ -81,7 +75,12 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
     } catch (error) {
       console.error("Error fetching related documents:", error)
     }
-  }
+  }, [documentId])
+
+  useEffect(() => {
+    fetchDocument()
+    fetchRelatedDocuments()
+  }, [fetchDocument, fetchRelatedDocuments])
 
   const handleSearch = () => {
     if (!searchQuery.trim() || !document?.content) return
@@ -113,14 +112,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch()
-    }
-  }
-
-  const addHighlight = () => {
-    const selection = window.getSelection()?.toString().trim()
-    if (selection) {
-      setHighlights([...highlights, selection])
-      toast.success("Highlight added")
     }
   }
 
@@ -337,7 +328,7 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
                     </div>
                   ) : searchQuery ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      No results found for "{searchQuery}"
+                      No results found for &ldquo;{searchQuery}&rdquo;
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">

@@ -28,6 +28,11 @@ interface PrismaEmbedding {
   }
 }
 
+interface Source {
+  id: string
+  title: string
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -117,7 +122,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function saveMessagesToDatabase(chatId: string, userMessage: string, aiResponse: string, sources: any[]) {
+async function saveMessagesToDatabase(chatId: string, userMessage: string, aiResponse: string, sources: Source[]) {
   try {
     // Save user message
     await prisma.message.create({

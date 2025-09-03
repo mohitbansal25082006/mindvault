@@ -11,13 +11,18 @@ interface ChatHistoryItem {
   preview: string
 }
 
-interface ChatWithMessages {
+interface PrismaChat {
   id: string
+  userId: string
+  createdAt: Date
+  updatedAt: Date
   title: string
-  createdAt: string
-  updatedAt: string
   messages: Array<{
+    id: string
+    createdAt: Date
     content: string
+    role: string
+    chatId: string
   }>
   _count: {
     messages: number
@@ -55,11 +60,11 @@ export async function GET(request: NextRequest) {
     })
 
     // Format the response
-    const formattedChats: ChatHistoryItem[] = chats.map((chat: ChatWithMessages) => ({
+    const formattedChats: ChatHistoryItem[] = chats.map((chat: PrismaChat) => ({
       id: chat.id,
       title: chat.title,
-      createdAt: chat.createdAt,
-      updatedAt: chat.updatedAt,
+      createdAt: chat.createdAt.toISOString(),
+      updatedAt: chat.updatedAt.toISOString(),
       messageCount: chat._count.messages,
       preview: chat.messages[0]?.content.substring(0, 100) + (chat.messages[0]?.content.length > 100 ? "..." : ""),
     }))
