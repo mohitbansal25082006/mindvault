@@ -34,7 +34,6 @@ export function SearchInterface() {
         setAllTags(tags)
       }
     } catch {
-      // removed unused `error` variable
       console.error("Error fetching tags")
     }
   }
@@ -98,6 +97,22 @@ export function SearchInterface() {
         part
       )
     )
+  }
+
+  // Safe date formatting function
+  const formatDateSafely = (dateString: string | null | undefined) => {
+    if (!dateString) return "Unknown date"
+    
+    try {
+      const date = new Date(dateString)
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return "Invalid date"
+      }
+      return formatDistanceToNow(date, { addSuffix: true })
+    } catch {
+      return "Invalid date"
+    }
   }
 
   return (
@@ -219,10 +234,7 @@ export function SearchInterface() {
                         <CardDescription className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           Updated{" "}
-                          {formatDistanceToNow(
-                            new Date(document.updated_at),
-                            { addSuffix: true }
-                          )}
+                          {formatDateSafely(document.updated_at)}
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
@@ -237,7 +249,7 @@ export function SearchInterface() {
                         : document.excerpt}
                     </p>
 
-                    {document.tags.length > 0 && (
+                    {document.tags && document.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-3">
                         {document.tags.map((tag, index) => (
                           <Badge
@@ -257,7 +269,7 @@ export function SearchInterface() {
 
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
-                        {document.content.length} characters
+                        {document.content?.length || 0} characters
                       </span>
                       <Link href={`/documents/${document.id}/edit`}>
                         <Button variant="outline" size="sm">

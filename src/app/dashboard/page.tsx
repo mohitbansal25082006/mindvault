@@ -43,6 +43,22 @@ export default function DashboardPage() {
     }
   }
 
+  // Safe date formatting function
+  const formatDateSafely = (dateString: string | null | undefined) => {
+    if (!dateString) return "Unknown date"
+    
+    try {
+      const date = new Date(dateString)
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return "Invalid date"
+      }
+      return formatDistanceToNow(date, { addSuffix: true })
+    } catch {
+      return "Invalid date"
+    }
+  }
+
   const recentDocuments = documents.slice(0, 5)
 
   return (
@@ -115,12 +131,12 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 mt-1">
                           <Clock className="h-3 w-3 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(document.updated_at), { addSuffix: true })}
+                            {formatDateSafely(document.updated_at)}
                           </span>
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        {document.tags.slice(0, 2).map((tag, index) => (
+                        {document.tags && document.tags.slice(0, 2).map((tag, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {tag}
                           </Badge>
