@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +9,7 @@ import { Search, Filter, Clock, FileText, Tag, X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { toast } from "sonner"
+import { useStats } from "@/contexts/stats-context"
 
 export function SearchInterface() {
   const [query, setQuery] = useState("")
@@ -18,6 +18,7 @@ export function SearchInterface() {
   const [isLoading, setIsLoading] = useState(false)
   const [allTags, setAllTags] = useState<string[]>([])
   const [hasSearched, setHasSearched] = useState(false)
+  const { updateStats } = useStats()
 
   useEffect(() => {
     fetchAllTags()
@@ -54,6 +55,11 @@ export function SearchInterface() {
       if (response.ok) {
         const data: Document[] = await response.json()
         setResults(data)
+        
+        // Update search count if there was a query
+        if (query.trim()) {
+          updateStats(prev => ({ ...prev, totalSearches: prev.totalSearches + 1 }))
+        }
       } else {
         toast.error("Search failed")
       }

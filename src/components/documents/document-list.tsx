@@ -18,6 +18,7 @@ import {
   Tag
 } from "lucide-react"
 import { toast } from "sonner"
+import { useStats } from "@/contexts/stats-context"
 
 export function DocumentList() {
   const [documents, setDocuments] = useState<Document[]>([])
@@ -25,6 +26,7 @@ export function DocumentList() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTag, setSelectedTag] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
+  const { updateStats, refreshStats } = useStats()
 
   // Get all unique tags
   const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])))
@@ -43,6 +45,8 @@ export function DocumentList() {
       if (response.ok) {
         const data = await response.json()
         setDocuments(data)
+        // Update stats with the new document count
+        updateStats(prev => ({ ...prev, totalDocuments: data.length }))
       } else {
         toast.error("Failed to fetch documents")
       }
@@ -77,13 +81,17 @@ export function DocumentList() {
     }
 
     try {
-      const response = await fetch(`/api/documents/${id}`, {
+      const response = await fetch(`/api/documents?id=${id}`, {
         method: "DELETE"
       })
 
       if (response.ok) {
         setDocuments(documents.filter(doc => doc.id !== id))
+        // Update stats after deletion
+        updateStats(prev => ({ ...prev, totalDocuments: prev.totalDocuments - 1 }))
         toast.success("Document deleted")
+        // Refresh all stats to ensure consistency
+        refreshStats()
       } else {
         toast.error("Failed to delete document")
       }

@@ -32,11 +32,9 @@ interface PrismaChat {
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const chats = await prisma.chat.findMany({
       where: {
         userId: session.user.id,
@@ -58,7 +56,6 @@ export async function GET(request: NextRequest) {
         },
       },
     })
-
     // Format the response
     const formattedChats: ChatHistoryItem[] = chats.map((chat: PrismaChat) => ({
       id: chat.id,
@@ -68,7 +65,6 @@ export async function GET(request: NextRequest) {
       messageCount: chat._count.messages,
       preview: chat.messages[0]?.content.substring(0, 100) + (chat.messages[0]?.content.length > 100 ? "..." : ""),
     }))
-
     return NextResponse.json(formattedChats)
   } catch (error) {
     console.error("Error fetching chat history:", error)
@@ -82,17 +78,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const { title } = await request.json()
-
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
-
     // Create a new chat
     const chat = await prisma.chat.create({
       data: {
@@ -100,7 +92,6 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
       },
     })
-
     return NextResponse.json(chat)
   } catch (error) {
     console.error("Error creating chat:", error)
@@ -108,5 +99,44 @@ export async function POST(request: NextRequest) {
       { error: "Failed to create chat" },
       { status: 500 }
     )
+  }
+}
+
+// DELETE chat (add this new endpoint)
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    const { searchParams } = new URL(request.url)
+    const chatId = searchParams.get("id")
+    
+    if (!chatId) {
+      return NextResponse.json({ error: "Chat ID is required" }, { status: 400 })
+    }
+    
+    // Verify the chat belongs to the current user
+    const chat = await prisma.chat.findFirst({
+      where: {
+        id: chatId,
+        userId: session.user.id,
+      },
+    })
+    
+    if (!chat) {
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 })
+    }
+    
+    // Delete the chat (this will also delete messages due to cascade)
+    await prisma.chat.delete({
+      where: { id: chatId },
+    })
+    
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting chat:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

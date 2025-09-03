@@ -91,3 +91,42 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+// DELETE document (add this new endpoint)
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    const { searchParams } = new URL(request.url)
+    const documentId = searchParams.get("id")
+    
+    if (!documentId) {
+      return NextResponse.json({ error: "Document ID is required" }, { status: 400 })
+    }
+    
+    // Verify the document belongs to the current user
+    const document = await prisma.document.findFirst({
+      where: {
+        id: documentId,
+        userId: session.user.id,
+      },
+    })
+    
+    if (!document) {
+      return NextResponse.json({ error: "Document not found" }, { status: 404 })
+    }
+    
+    // Delete the document (this will also delete embeddings due to cascade)
+    await prisma.document.delete({
+      where: { id: documentId },
+    })
+    
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting document:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

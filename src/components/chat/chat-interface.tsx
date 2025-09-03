@@ -13,6 +13,7 @@ import { Send, Bot, User, FileText, ExternalLink, Loader2, Brain, Save, History,
 import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useStats } from "@/contexts/stats-context"
 
 interface ChatMessage {
   id: string
@@ -34,6 +35,7 @@ interface ChatHistoryItem {
 export function ChatInterface() {
   const { data: session } = useSession()
   const router = useRouter()
+  const { updateStats, refreshStats } = useStats()
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -144,6 +146,9 @@ export function ChatInterface() {
         setIsSaveDialogOpen(false)
         toast.success("Chat saved successfully!")
         
+        // Update stats after creating a new chat
+        updateStats(prev => ({ ...prev, totalChats: prev.totalChats + 1 }))
+        
         // Save all current messages to this chat
         for (const message of messages) {
           if (message.id !== "1") { // Skip the initial welcome message
@@ -178,6 +183,9 @@ export function ChatInterface() {
       if (response.ok) {
         setChatHistory(prev => prev.filter(chat => chat.id !== chatId))
         toast.success("Chat deleted successfully")
+        
+        // Update stats after deleting a chat
+        updateStats(prev => ({ ...prev, totalChats: Math.max(0, prev.totalChats - 1) }))
         
         // If we're currently viewing the deleted chat, reset the chat interface
         if (currentChatId === chatId) {
@@ -491,7 +499,7 @@ export function ChatInterface() {
                           {message.sources.map((source, index) => (
                             <Link
                               key={getSourceKey(source, index)}
-                              href={`/documents/${source.id}/edit`}
+                              href={`/documents/${source.id}/view`}
                             >
                               <Badge
                                 variant="secondary"
