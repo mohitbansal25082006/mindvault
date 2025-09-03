@@ -223,7 +223,7 @@ export function SearchInterface() {
                       <div className="flex-1">
                         <CardTitle className="text-lg mb-2">
                           <Link
-                            href={`/documents/${document.id}/edit`}
+                            href={`/documents/${document.id}/view`}
                             className="hover:text-primary"
                           >
                             {query
@@ -271,11 +271,18 @@ export function SearchInterface() {
                       <span className="text-sm text-muted-foreground">
                         {document.content?.length || 0} characters
                       </span>
-                      <Link href={`/documents/${document.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          View Document
-                        </Button>
-                      </Link>
+                      <div className="flex gap-2">
+                        <Link href={`/documents/${document.id}/view`}>
+                          <Button variant="outline" size="sm">
+                            View Document
+                          </Button>
+                        </Link>
+                        <Link href={`/documents/${document.id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            Edit
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
