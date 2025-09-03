@@ -13,13 +13,9 @@ import {
   FileText, 
   Calendar, 
   Tag, 
-  MessageSquare, 
   Search, 
-  Share, 
   Download, 
   Edit,
-  Bookmark,
-  BookmarkCheck,
   Clock,
   User,
   FileText as FileIcon
@@ -51,7 +47,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [relatedDocuments, setRelatedDocuments] = useState<RelatedDocument[]>([])
-  const [isBookmarked, setIsBookmarked] = useState(false)
   const [highlights, setHighlights] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState("document")
 
@@ -121,11 +116,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
     }
   }
 
-  const toggleBookmark = () => {
-    setIsBookmarked(!isBookmarked)
-    toast.success(isBookmarked ? "Bookmark removed" : "Document bookmarked")
-  }
-
   const addHighlight = () => {
     const selection = window.getSelection()?.toString().trim()
     if (selection) {
@@ -191,7 +181,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
     if (highlights.length === 0) {
       return <p key={index}>{paragraph}</p>
     }
-
     let result: React.ReactNode[] = [paragraph]
     
     highlights.forEach(highlight => {
@@ -264,13 +253,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={toggleBookmark}>
-            {isBookmarked ? (
-              <BookmarkCheck className="h-4 w-4" />
-            ) : (
-              <Bookmark className="h-4 w-4" />
-            )}
-          </Button>
           <Button variant="outline" size="sm" onClick={downloadDocument}>
             <Download className="h-4 w-4" />
           </Button>
