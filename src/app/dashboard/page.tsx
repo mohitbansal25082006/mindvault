@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -21,14 +20,14 @@ import {
 } from "lucide-react"
 
 export default function DashboardPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
-
+  
   useEffect(() => {
     fetchRecentDocuments()
   }, [])
-
+  
   const fetchRecentDocuments = async () => {
     try {
       const response = await fetch("/api/documents")
@@ -42,7 +41,7 @@ export default function DashboardPage() {
       setIsLoading(false)
     }
   }
-
+  
   // Safe date formatting function
   const formatDateSafely = (dateString: string | null | undefined) => {
     if (!dateString) return "Unknown date"
@@ -58,12 +57,15 @@ export default function DashboardPage() {
       return "Invalid date"
     }
   }
-
+  
   const recentDocuments = documents.slice(0, 5)
-
+  
+  // Add a key that forces re-render when session changes
+  const sessionKey = session?.user?.name || "default"
+  
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div key={sessionKey} className="p-6 space-y-6">
         {/* Welcome Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -89,14 +91,14 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
-
+        
         {/* Stats */}
         <DashboardStats 
           totalDocuments={documents.length}
           totalChats={0}
           totalSearches={0}
         />
-
+        
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Recent Documents */}
@@ -159,7 +161,7 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
-
+          
           {/* Quick Actions */}
           <Card>
             <CardHeader>
@@ -181,7 +183,6 @@ export default function DashboardPage() {
                     </div>
                   </Button>
                 </Link>
-
                 <Link href="/chat">
                   <Button className="w-full justify-start gap-3 h-12" variant="outline">
                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/10">
@@ -193,7 +194,6 @@ export default function DashboardPage() {
                     </div>
                   </Button>
                 </Link>
-
                 <Link href="/search">
                   <Button className="w-full justify-start gap-3 h-12" variant="outline">
                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10">
@@ -209,7 +209,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-
+        
         {/* Activity Overview */}
         <Card>
           <CardHeader>

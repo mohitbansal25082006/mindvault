@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -40,15 +39,14 @@ export function SettingsInterface() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<ProfileData>({
     resolver: zodResolver(ProfileSchema)
   })
-
+  
   useEffect(() => {
     fetchProfile()
   }, [])
-
+  
   const fetchProfile = async () => {
     try {
       const response = await fetch("/api/user/profile")
@@ -68,7 +66,7 @@ export function SettingsInterface() {
       setIsLoading(false)
     }
   }
-
+  
   const onSubmit = async (data: ProfileData) => {
     setIsSaving(true)
     try {
@@ -77,12 +75,12 @@ export function SettingsInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-
+      
       if (response.ok) {
         const updatedProfile = await response.json()
         setProfile({ ...profile!, ...updatedProfile })
         
-        // Update session
+        // Update session with the new name
         await update({
           ...session,
           user: {
@@ -91,6 +89,10 @@ export function SettingsInterface() {
             email: data.email,
           }
         })
+        
+        // Force a refresh of the session to ensure all components get the updated data
+        // This triggers the JWT callback with trigger="update" in auth.ts
+        await update()
         
         toast.success("Profile updated successfully!")
       } else {
@@ -103,7 +105,7 @@ export function SettingsInterface() {
       setIsSaving(false)
     }
   }
-
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -111,7 +113,7 @@ export function SettingsInterface() {
       </div>
     )
   }
-
+  
   if (!profile) {
     return (
       <div className="text-center py-12">
@@ -120,7 +122,7 @@ export function SettingsInterface() {
       </div>
     )
   }
-
+  
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -130,7 +132,7 @@ export function SettingsInterface() {
           Manage your account settings and preferences
         </p>
       </div>
-
+      
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile Overview */}
         <Card className="lg:col-span-1">
@@ -148,9 +150,7 @@ export function SettingsInterface() {
               <h3 className="text-xl font-semibold">{profile.name}</h3>
               <p className="text-muted-foreground">{profile.email}</p>
             </div>
-
             <Separator />
-
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -174,7 +174,7 @@ export function SettingsInterface() {
             </div>
           </CardContent>
         </Card>
-
+        
         {/* Settings Forms */}
         <div className="lg:col-span-2 space-y-6">
           {/* Profile Settings */}
@@ -202,7 +202,7 @@ export function SettingsInterface() {
                     <p className="text-red-500 text-sm">{errors.name.message}</p>
                   )}
                 </div>
-
+                
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
@@ -219,7 +219,7 @@ export function SettingsInterface() {
                     <p className="text-red-500 text-sm">{errors.email.message}</p>
                   )}
                 </div>
-
+                
                 <div className="flex justify-end">
                   <Button type="submit" disabled={!isDirty || isSaving}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -230,7 +230,7 @@ export function SettingsInterface() {
               </form>
             </CardContent>
           </Card>
-
+          
           {/* Appearance Settings */}
           <Card>
             <CardHeader>
@@ -251,7 +251,7 @@ export function SettingsInterface() {
               </div>
             </CardContent>
           </Card>
-
+          
           {/* Account Statistics */}
           <Card>
             <CardHeader>
@@ -277,7 +277,7 @@ export function SettingsInterface() {
               </div>
             </CardContent>
           </Card>
-
+          
           {/* Danger Zone */}
           <Card className="border-red-200 dark:border-red-800">
             <CardHeader>

@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -31,11 +30,11 @@ export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
-
+  
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" })
   }
-
+  
   return (
     <>
       {/* Mobile menu button */}
@@ -49,7 +48,7 @@ export function Sidebar() {
           {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
       </div>
-
+      
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -57,7 +56,7 @@ export function Sidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
+      
       {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-40 w-64 bg-background border-r transform transition-transform lg:translate-x-0 lg:static lg:inset-0
@@ -66,10 +65,12 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center gap-2 p-6 border-b">
-            <Brain className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">MindVault</span>
+            <Link href="/" className="flex items-center gap-2">
+              <Brain className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold">MindVault</span>
+            </Link>
           </div>
-
+          
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
@@ -99,7 +100,7 @@ export function Sidebar() {
               </Link>
             </div>
           </nav>
-
+          
           {/* User Profile & Actions */}
           <div className="p-4 border-t space-y-4">
             <div className="flex items-center gap-3">

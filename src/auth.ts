@@ -65,9 +65,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.sub && session.user) {
         session.user.id = token.sub
       }
+      
+      // Add user name from token to session
+      if (token.name && session.user) {
+        session.user.name = token.name
+      }
+      
       return session
     },
-    async jwt({ token }) {
+    async jwt({ token, user, trigger, session }) {
+      // Persist the OAuth access_token and user id to the token right after signin
+      if (user) {
+        token.id = user.id
+        token.name = user.name
+      }
+      
+      // Update token when session is updated (triggered by client-side update)
+      if (trigger === "update" && session) {
+        token.name = session.user.name
+      }
+      
       return token
     },
   },
