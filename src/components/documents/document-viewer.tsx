@@ -15,19 +15,14 @@ import {
   Tag, 
   MessageSquare, 
   Search, 
-  Brain, 
   Share, 
   Download, 
   Edit,
-  Highlighter,
   Bookmark,
   BookmarkCheck,
   Clock,
   User,
-  FileQuestion,
-  FileText as FileIcon,
-  Hash,
-  Plus
+  FileText as FileIcon
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
@@ -156,29 +151,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
     )
   }
 
-  const handleAskAI = async () => {
-    if (!searchQuery.trim()) return
-    
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          message: `Regarding the document "${document?.title}": ${searchQuery}`,
-          documentId: documentId 
-        }),
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setActiveTab("chat")
-        // In a real implementation, you would display the AI response
-        toast.success("AI response received")
-      }
-    } catch (error) {
-      toast.error("Failed to get AI response")
-    }
-  }
-
   const downloadDocument = () => {
     if (!document) return
     
@@ -302,9 +274,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
           <Button variant="outline" size="sm" onClick={downloadDocument}>
             <Download className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={addHighlight}>
-            <Highlighter className="h-4 w-4" />
-          </Button>
           <Link href={`/documents/${document.id}/edit`}>
             <Button size="sm">
               <Edit className="h-4 w-4 mr-2" />
@@ -364,9 +333,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
                     />
                     <Button onClick={handleSearch}>
                       <Search className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" onClick={handleAskAI}>
-                      <Brain className="h-4 w-4" />
                     </Button>
                   </div>
                   
@@ -529,27 +495,6 @@ export function DocumentViewer({ documentId }: { documentId: string }) {
               </CardContent>
             </Card>
           )}
-          
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full justify-start" variant="outline">
-                <Share className="h-4 w-4 mr-2" />
-                Share Document
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Ask AI About This
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Hash className="h-4 w-4 mr-2" />
-                Manage Tags
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
