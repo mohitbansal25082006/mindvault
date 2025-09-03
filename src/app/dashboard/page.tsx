@@ -12,7 +12,6 @@ import Link from "next/link"
 import { 
   FileText, 
   Plus, 
-  TrendingUp, 
   Clock, 
   MessageSquare,
   Search,
@@ -209,33 +208,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Activity Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">Activity Overview</CardTitle>
-            <CardDescription>Your knowledge vault activity this week</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold">{documents.length}</p>
-                <p className="text-sm text-muted-foreground">Documents Created</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <MessageSquare className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground">AI Conversations</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <Search className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground">Searches Performed</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   )
