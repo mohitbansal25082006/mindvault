@@ -55,6 +55,7 @@ model User {
   accounts  Account[]
   sessions  Session[]
   documents Document[]
+  chats     Chat[]
 
   @@map("users")
 }
@@ -96,4 +97,30 @@ model Embedding {
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@map("embeddings")
+}
+
+// Chat Models
+model Chat {
+  id        String   @id @default(cuid())
+  title     String
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@map("chats")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  role      String   // "user" or "assistant"
+  chatId    String   @map("chat_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
 }

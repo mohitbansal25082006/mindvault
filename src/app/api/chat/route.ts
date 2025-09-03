@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { message } = await request.json()
+    const { message, chatId } = await request.json()
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
@@ -75,8 +75,15 @@ export async function POST(request: NextRequest) {
       .filter((match: EmbeddingWithSimilarity) => match.similarity > 0.3) // Minimum similarity threshold
 
     if (topMatches.length === 0) {
+      const aiResponse = "I couldn't find any relevant information in your documents to answer that question. Try asking about topics you've written about in your knowledge base."
+      
+      // Save messages to database if chatId is provided
+      if (chatId) {
+        await saveMessagesToDatabase(chatId, message, aiResponse, [])
+      }
+      
       return NextResponse.json({
-        response: "I couldn't find any relevant information in your documents to answer that question. Try asking about topics you've written about in your knowledge base.",
+        response: aiResponse,
         sources: []
       })
     }
@@ -91,6 +98,11 @@ export async function POST(request: NextRequest) {
     // Generate AI response
     const aiResponse = await generateResponse(message, context)
 
+    // Save messages to database if chatId is provided
+    if (chatId) {
+      await saveMessagesToDatabase(chatId, message, aiResponse, sources)
+    }
+
     return NextResponse.json({
       response: aiResponse,
       sources,
@@ -102,5 +114,34 @@ export async function POST(request: NextRequest) {
       { error: "Failed to process your message" },
       { status: 500 }
     )
+  }
+}
+
+async function saveMessagesToDatabase(chatId: string, userMessage: string, aiResponse: string, sources: any[]) {
+  try {
+    // Save user message
+    await prisma.message.create({
+      data: {
+        content: userMessage,
+        role: "user",
+        chatId,
+      },
+    })
+
+    // Save assistant message with sources as part of the content
+    const assistantContent = JSON.stringify({
+      response: aiResponse,
+      sources,
+    })
+
+    await prisma.message.create({
+      data: {
+        content: assistantContent,
+        role: "assistant",
+        chatId,
+      },
+    })
+  } catch (error) {
+    console.error("Error saving messages to database:", error)
   }
 }
