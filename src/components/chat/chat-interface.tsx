@@ -15,7 +15,7 @@ import Link from "next/link"
 interface ChatMessage {
   id: string
   content: string
-  role: 'user' | 'assistant'
+  role: "user" | "assistant"
   timestamp: Date
   sources?: Array<{ id: string; title: string }>
 }
@@ -26,7 +26,8 @@ export function ChatInterface() {
     {
       id: "1",
       role: "assistant",
-      content: "Hello! I'm your AI knowledge assistant. I can help you find information from your documents, answer questions about your notes, and provide insights. What would you like to know?",
+      content:
+        "Hello! I'm your AI knowledge assistant. I can help you find information from your documents, answer questions about your notes, and provide insights. What would you like to know?",
       timestamp: new Date(),
     },
   ])
@@ -50,44 +51,45 @@ export function ChatInterface() {
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: input,
-      role: 'user',
+      role: "user",
       timestamp: new Date(),
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get response')
+        throw new Error("Failed to get response")
       }
 
       const data = await response.json()
 
       // Ensure sources are unique by id before storing
-      const uniqueSources = data.sources 
-        ? data.sources.filter((source: { id: string }, index: number, self: { id: string }[]) => 
-            index === self.findIndex((s: { id: string }) => s.id === source.id)
+      const uniqueSources = data.sources
+        ? data.sources.filter(
+            (source: { id: string }, index: number, self: { id: string }[]) =>
+              index === self.findIndex((s: { id: string }) => s.id === source.id)
           )
         : []
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: data.response,
-        role: 'assistant',
+        role: "assistant",
         timestamp: new Date(),
         sources: uniqueSources,
       }
 
-      setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch (_error) {
       toast.error("Failed to send message")
     } finally {
       setIsLoading(false)
@@ -95,7 +97,7 @@ export function ChatInterface() {
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       sendMessage(e as unknown as React.FormEvent)
     }
@@ -147,11 +149,11 @@ export function ChatInterface() {
                 <div
                   key={message.id}
                   className={`flex gap-3 ${
-                    message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                    message.role === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
                   <Avatar className="h-8 w-8 flex-shrink-0">
-                    {message.role === 'user' ? (
+                    {message.role === "user" ? (
                       <>
                         <AvatarImage src={session?.user?.image || ""} />
                         <AvatarFallback>
@@ -165,12 +167,16 @@ export function ChatInterface() {
                     )}
                   </Avatar>
 
-                  <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                  <div
+                    className={`flex-1 max-w-[80%] ${
+                      message.role === "user" ? "text-right" : "text-left"
+                    }`}
+                  >
                     <div
                       className={`rounded-lg px-4 py-2 ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground ml-auto'
-                          : 'bg-muted'
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground ml-auto"
+                          : "bg-muted"
                       }`}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
@@ -181,8 +187,14 @@ export function ChatInterface() {
                         <p className="text-xs text-muted-foreground">Sources:</p>
                         <div className="flex flex-wrap gap-1">
                           {message.sources.map((source, index) => (
-                            <Link key={getSourceKey(source, index)} href={`/documents/${source.id}/edit`}>
-                              <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                            <Link
+                              key={getSourceKey(source, index)}
+                              href={`/documents/${source.id}/edit`}
+                            >
+                              <Badge
+                                variant="secondary"
+                                className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                              >
                                 <FileText className="h-3 w-3 mr-1" />
                                 {source.title}
                                 <ExternalLink className="h-3 w-3 ml-1" />
@@ -241,11 +253,21 @@ export function ChatInterface() {
             </form>
 
             <div className="flex flex-wrap gap-2 mt-3">
-              <Badge variant="outline" className="text-xs cursor-pointer" onClick={() => setInput("What are the main topics in my documents?")}>
-                💡 Try: "What are the main topics in my documents?"
+              <Badge
+                variant="outline"
+                className="text-xs cursor-pointer"
+                onClick={() =>
+                  setInput("What are the main topics in my documents?")
+                }
+              >
+                💡 Try: &quot;What are the main topics in my documents?&quot;
               </Badge>
-              <Badge variant="outline" className="text-xs cursor-pointer" onClick={() => setInput("Summarize my latest notes")}>
-                💡 Try: "Summarize my latest notes"
+              <Badge
+                variant="outline"
+                className="text-xs cursor-pointer"
+                onClick={() => setInput("Summarize my latest notes")}
+              >
+                💡 Try: &quot;Summarize my latest notes&quot;
               </Badge>
             </div>
           </div>

@@ -1,7 +1,34 @@
-// E:\mindvault\src\app\api\search\route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+
+// Define the interface for the returned documents
+interface SearchResult {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  title: string
+  content: string
+  excerpt: string | null
+  tags: string[]
+}
+
+// Define the where clause structure
+interface WhereClause {
+  userId: string
+  AND?: Array<{
+    OR?: Array<{
+      title?: { contains: string; mode: "insensitive" }
+      content?: { contains: string; mode: "insensitive" }
+    }>
+    tags?: { has: string }
+  }>
+  OR?: Array<{
+    title?: { contains: string; mode: "insensitive" }
+    content?: { contains: string; mode: "insensitive" }
+  }>
+  tags?: { has: string }
+}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -21,57 +48,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Query or tag is required" }, { status: 400 })
     }
 
-    /**
-     * Safely extract the `where` type from the prisma call parameter.
-     * If extraction fails (because the inferred parameter type is unknown),
-     * fall back to a generic object shape (Record<string, unknown>).
-     */
-    type FindManyArgs = Parameters<typeof prisma.document.findMany>[0]
-    type ExtractedWhere = FindManyArgs extends { where?: infer W } ? NonNullable<W> : Record<string, unknown>
-    type WhereType = ExtractedWhere
-
     const userId = session.user.id as string
 
-    // Build a properly typed where object per branch (no unsafe spreads)
-    let whereFinal: WhereType
+    // Build the where clause with proper typing
+    const whereClause: WhereClause = { userId }
 
     if (query && tag) {
-      whereFinal = {
-        userId,
-        AND: [
-          {
-            OR: [
-              { title: { contains: query, mode: "insensitive" } },
-              { content: { contains: query, mode: "insensitive" } },
-            ],
-          },
-          {
-            tags: { has: tag },
-          },
-        ],
-      } as WhereType
+      whereClause.AND = [
+        {
+          OR: [
+            { title: { contains: query, mode: "insensitive" } },
+            { content: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        {
+          tags: { has: tag },
+        },
+      ]
     } else if (query) {
-      whereFinal = {
-        userId,
-        OR: [
-          { title: { contains: query, mode: "insensitive" } },
-          { content: { contains: query, mode: "insensitive" } },
-        ],
-      } as WhereType
-    } else {
-      // tag-only case
-      whereFinal = {
-        userId,
-        tags: { has: tag! },
-      } as WhereType
+      whereClause.OR = [
+        { title: { contains: query, mode: "insensitive" } },
+        { content: { contains: query, mode: "insensitive" } },
+      ]
+    } else if (tag) {
+      whereClause.tags = { has: tag }
     }
 
-    // Infer returned document type from prisma call
-    type DocumentsArray = Awaited<ReturnType<typeof prisma.document.findMany>>
-    type Doc = DocumentsArray extends Array<infer U> ? U : never
-
-    const documents: Doc[] = await prisma.document.findMany({
-      where: whereFinal,
+    const documents: SearchResult[] = await prisma.document.findMany({
+      where: whereClause,
       select: {
         id: true,
         title: true,
@@ -84,40 +88,29 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       orderBy: { updatedAt: "desc" },
     })
 
-    // Helper to safely convert unknown values to string (no `any`)
-    const toStr = (v: unknown) => {
-      if (typeof v === "string") return v
-      if (v == null) return ""
-      try {
-        return String(v)
-      } catch {
-        return ""
-      }
+    // Add simple relevance scoring
+    interface DocumentWithRelevance extends SearchResult {
+      relevance: number
     }
 
-    // Add simple relevance scoring
-    type DocumentWithRelevance = Doc & { relevance: number }
     const q = query ?? ""
 
     const results: DocumentWithRelevance[] = documents
-      .map((doc: Doc): DocumentWithRelevance => {
+      .map((doc): DocumentWithRelevance => {
         let relevance = 0
 
         if (q) {
-          const titleVal = toStr((doc as unknown as Record<string, unknown>)["title"])
-          const contentVal = toStr((doc as unknown as Record<string, unknown>)["content"])
-
-          const titleMatch = titleVal.toLowerCase().includes(q.toLowerCase())
-          const contentMatch = contentVal.toLowerCase().includes(q.toLowerCase())
+          const titleMatch = doc.title.toLowerCase().includes(q.toLowerCase())
+          const contentMatch = doc.content.toLowerCase().includes(q.toLowerCase())
 
           if (titleMatch) relevance += 10
           if (contentMatch) relevance += 5
         }
 
         return {
-          ...(doc as object),
+          ...doc,
           relevance,
-        } as DocumentWithRelevance
+        }
       })
       .sort((a, b) => b.relevance - a.relevance)
 

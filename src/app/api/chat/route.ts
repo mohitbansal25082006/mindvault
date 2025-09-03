@@ -16,6 +16,18 @@ interface EmbeddingWithSimilarity {
   }
 }
 
+interface PrismaEmbedding {
+  id: string
+  documentId: string
+  content: string
+  embedding: number[]
+  createdAt: Date
+  document: {
+    id: string
+    title: string
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -51,7 +63,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Calculate similarity scores with proper typing
-    const similarities: EmbeddingWithSimilarity[] = userEmbeddings.map((embedding: any) => ({
+    const similarities: EmbeddingWithSimilarity[] = userEmbeddings.map((embedding: PrismaEmbedding) => ({
       ...embedding,
       similarity: cosineSimilarity(questionEmbedding, embedding.embedding),
     }))
