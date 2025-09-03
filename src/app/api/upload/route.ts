@@ -3,6 +3,15 @@ import { auth } from "@/auth"
 import { writeFile } from "fs/promises"
 import { join } from "path"
 
+// Define types for pdfreader
+interface PdfItem {
+  text?: string
+  [key: string]: unknown
+}
+
+type PdfReaderError = Error | null | string
+type PdfReaderItem = PdfItem | null
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -46,19 +55,25 @@ export async function POST(request: NextRequest) {
     // Extract text based on file type
     if (file.type === "application/pdf") {
       try {
-        // Use pdfreader for PDF parsing
-        const PdfReader = require("pdfreader").PdfReader
+        // Use pdfreader for PDF parsing with dynamic import
+        const pdfreaderModule = await import("pdfreader")
+        const PdfReader = pdfreaderModule.PdfReader
         
         // Parse PDF and extract text
-        extractedText = await new Promise((resolve, reject) => {
+        extractedText = await new Promise<string>((resolve, reject) => {
           let textContent = ""
           
-          new PdfReader().parseBuffer(buffer, (err: any, item: any) => {
+          new PdfReader().parseBuffer(buffer, (err: PdfReaderError, item: PdfReaderItem) => {
             if (err) {
-              reject(err)
+              // Convert string error to Error object if needed
+              if (typeof err === 'string') {
+                reject(new Error(err))
+              } else {
+                reject(err)
+              }
             } else if (!item) {
               resolve(textContent)
-            } else if (item.text) {
+            } else if (item?.text) {
               textContent += item.text + " "
             }
           })
