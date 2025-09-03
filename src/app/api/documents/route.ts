@@ -8,11 +8,9 @@ import { DocumentSchema } from "@/lib/validations"
 export async function GET() {
   try {
     const session = await auth()
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const documents = await prisma.document.findMany({
       where: { userId: session.user.id },
       orderBy: { updatedAt: "desc" },
@@ -27,7 +25,6 @@ export async function GET() {
         updatedAt: true,
       }
     })
-
     return NextResponse.json(documents)
   } catch (error) {
     console.error("Error fetching documents:", error)
@@ -39,25 +36,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
+    
     const body = await request.json()
     const validatedData = DocumentSchema.safeParse(body)
-
+    
     if (!validatedData.success) {
       return NextResponse.json({ error: "Invalid data" }, { status: 400 })
     }
-
+    
     const { title, content, tags = [], isPublic = false } = validatedData.data
-
+    
     // Generate excerpt from content (first 150 chars)
     const excerpt = content.length > 150 
       ? content.substring(0, 150) + "..."
       : content
-
+    
     // Create document first
     const document = await prisma.document.create({
       data: {
@@ -69,7 +65,7 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
       }
     })
-
+    
     // Generate embeddings for content chunks
     try {
       const chunks = chunkText(content, 1000)
@@ -83,13 +79,12 @@ export async function POST(request: NextRequest) {
           },
         })
       })
-
       await Promise.all(embeddingPromises)
     } catch (embeddingError) {
       console.error("Error generating embeddings:", embeddingError)
       // Don't fail the document creation if embeddings fail
     }
-
+    
     return NextResponse.json(document, { status: 201 })
   } catch (error) {
     console.error("Error creating document:", error)

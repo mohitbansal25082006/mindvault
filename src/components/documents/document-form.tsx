@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -10,11 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
 import { DocumentSchema, DocumentData } from "@/lib/validations"
 import { Document } from "@/types"
 import { toast } from "sonner"
-import { Save, X, Tag } from "lucide-react"
+import { Save, X, Tag, Upload, FileText, Loader2 } from "lucide-react"
 
 interface DocumentFormProps {
   document?: Document
@@ -24,9 +24,16 @@ interface DocumentFormProps {
 export function DocumentForm({ document, isEditing = false }: DocumentFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [content, setContent] = useState(document?.content || "")
   const [tagInput, setTagInput] = useState("")
   const [tags, setTags] = useState<string[]>(document?.tags || [])
+  const [uploadedFile, setUploadedFile] = useState<{
+    fileName: string
+    originalName: string
+    fileType: string
+  } | null>(null)
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<DocumentData>({
     resolver: zodResolver(DocumentSchema),
@@ -94,6 +101,77 @@ export function DocumentForm({ document, isEditing = false }: DocumentFormProps)
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Check file type
+    if (file.type !== "application/pdf" && file.type !== "text/plain") {
+      toast.error("Only PDF and TXT files are supported")
+      return
+    }
+
+    // Check file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB")
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90))
+      }, 200)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Set the title from the file name if not already set
+        if (!watchedValues.title) {
+          const titleWithoutExtension = data.originalName
+            .replace(/\.[^/.]+$/, "")
+            .replace(/[-_]/g, " ")
+            .replace(/\b\w/g, (char: string) => char.toUpperCase())
+          setValue("title", titleWithoutExtension)
+        }
+        
+        // Set the content from the extracted text
+        setContent(data.extractedText)
+        
+        // Store file info
+        setUploadedFile({
+          fileName: data.fileName,
+          originalName: data.originalName,
+          fileType: data.fileType,
+        })
+        
+        toast.success(`Successfully uploaded ${data.originalName}`)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Failed to upload file")
+      }
+    } catch (error) {
+      toast.error("Something went wrong")
+    } finally {
+      setIsUploading(false)
+      setTimeout(() => setUploadProgress(0), 1000)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <Card>
@@ -104,6 +182,49 @@ export function DocumentForm({ document, isEditing = false }: DocumentFormProps)
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* File Upload */}
+            {!isEditing && (
+              <div className="space-y-2">
+                <Label>Upload Document (PDF or TXT)</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  {isUploading ? (
+                    <div className="space-y-3">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                      <p>Uploading and processing file...</p>
+                      <Progress value={uploadProgress} className="w-full" />
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto" />
+                      <p className="text-sm text-gray-600">
+                        Drag and drop a file here, or click to browse
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Supports PDF and TXT files up to 10MB
+                      </p>
+                      <Input
+                        type="file"
+                        accept=".pdf,.txt"
+                        onChange={handleFileUpload}
+                        className="max-w-xs mx-auto mt-2"
+                      />
+                    </>
+                  )}
+                </div>
+                {uploadedFile && (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-md">
+                    <FileText className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium">
+                      {uploadedFile.originalName}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {uploadedFile.fileType === "application/pdf" ? "PDF" : "TXT"}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
@@ -177,7 +298,7 @@ export function DocumentForm({ document, isEditing = false }: DocumentFormProps)
 
             {/* Actions */}
             <div className="flex gap-4">
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || isUploading}>
                 <Save className="h-4 w-4 mr-2" />
                 {isLoading ? "Saving..." : "Save Document"}
               </Button>
@@ -185,6 +306,7 @@ export function DocumentForm({ document, isEditing = false }: DocumentFormProps)
                 type="button" 
                 variant="outline" 
                 onClick={() => router.push("/documents")}
+                disabled={isLoading || isUploading}
               >
                 Cancel
               </Button>
