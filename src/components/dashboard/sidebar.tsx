@@ -13,7 +13,9 @@ import {
   Plus,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Users,
+  MessageCircle
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -23,6 +25,7 @@ const navigation = [
   { name: "Documents", href: "/documents", icon: FileText },
   { name: "AI Chat", href: "/chat", icon: MessageSquare },
   { name: "Search", href: "/search", icon: Search },
+  { name: "Community", href: "/forum", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
 
@@ -75,7 +78,8 @@ export function Sidebar() {
           <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              const isActive = pathname === item.href || 
+                           (item.href === "/forum" && pathname.startsWith("/forum"))
               
               return (
                 <Link key={item.name} href={item.href}>
@@ -91,11 +95,17 @@ export function Sidebar() {
               )
             })}
             
-            <div className="pt-4">
+            <div className="pt-4 space-y-2">
               <Link href="/documents/new">
                 <Button className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700">
                   <Plus className="h-4 w-4" />
                   New Document
+                </Button>
+              </Link>
+              <Link href="/forum/create">
+                <Button className="w-full gap-2" variant="outline">
+                  <MessageCircle className="h-4 w-4" />
+                  New Post
                 </Button>
               </Link>
             </div>

@@ -98,19 +98,46 @@ function SelectLabel({
   )
 }
 
+/**
+ * Wrap SelectPrimitive.Item to defensively handle empty-string values.
+ *
+ * Important fix: we *do not* spread the original props (which may include an
+ * empty `value`) after setting our safe `value`. We extract `value` and
+ * `disabled`, compute safe values, and then spread the rest.
+ */
 function SelectItem({
   className,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  // Pull out value/disabled so they don't get re-spread later
+  const { value: incomingValue, disabled: incomingDisabled, ...rest } =
+    (props as any) || {}
+
+  const incomingValueStr = typeof incomingValue === "string" ? incomingValue : undefined
+  const isEmptyValue = incomingValueStr === "" || incomingValueStr === undefined
+  const safeValue = isEmptyValue ? "__no_value__" : incomingValueStr
+
+  if (isEmptyValue) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "Select.Item received an empty or missing value. Radix requires a non-empty value. " +
+        `Rendering as disabled with coerced value: "${safeValue}". Please provide a meaningful non-empty \`value\`.`
+    )
+  }
+
+  const finalDisabled = !!incomingDisabled || isEmptyValue
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      value={safeValue}
+      disabled={finalDisabled}
       className={cn(
         "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
-      {...props}
+      {...(rest as any)}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>

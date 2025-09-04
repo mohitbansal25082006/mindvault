@@ -25,9 +25,7 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([provider, providerAccountId])
   @@map("accounts")
 }
@@ -38,7 +36,6 @@ model Session {
   userId       String   @map("user_id")
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@map("sessions")
 }
 
@@ -51,12 +48,13 @@ model User {
   password      String?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  accounts  Account[]
-  sessions  Session[]
-  documents Document[]
-  chats     Chat[]
-
+  accounts      Account[]
+  sessions      Session[]
+  documents    Document[]
+  chats        Chat[]
+  forumPosts   ForumPost[]
+  forumComments ForumComment[]
+  forumLikes   ForumLike[]
   @@map("users")
 }
 
@@ -64,7 +62,6 @@ model VerificationToken {
   identifier String
   token      String
   expires    DateTime
-
   @@unique([identifier, token])
   @@map("verificationtokens")
 }
@@ -80,10 +77,8 @@ model Document {
   userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   embeddings Embedding[]
-
   @@map("documents")
 }
 
@@ -93,9 +88,7 @@ model Embedding {
   content    String    @db.Text
   embedding  Float[]
   createdAt  DateTime  @default(now()) @map("created_at")
-
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
   @@map("embeddings")
 }
 
@@ -106,10 +99,8 @@ model Chat {
   userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
-
   @@map("chats")
 }
 
@@ -119,8 +110,64 @@ model Message {
   role      String   // "user" or "assistant"
   chatId    String   @map("chat_id")
   createdAt DateTime @default(now()) @map("created_at")
-
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-
   @@map("messages")
+}
+
+// Forum Models
+model ForumCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  color       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  posts       ForumPost[]
+  @@map("forum_categories")
+}
+
+model ForumPost {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  views       Int      @default(0)
+  isPinned    Boolean  @default(false)
+  isLocked    Boolean  @default(false)
+  categoryId  String   @map("category_id")
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    ForumCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  comments    ForumComment[]
+  likes       ForumLike[]
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      ForumPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  likes     ForumLike[]
+  @@map("forum_comments")
+}
+
+model ForumLike {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  postId     String?  @map("post_id")
+  commentId  String?  @map("comment_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment    ForumComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@map("forum_likes")
 }
