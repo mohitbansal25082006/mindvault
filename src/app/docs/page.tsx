@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -115,47 +117,16 @@ export default function DocsPage() {
   })).filter(category => category.articles.length > 0)
 
   const popularArticles = [
-    {
-      title: "Getting Started with MindVault",
-      slug: "getting-started",
-      views: 12420
-    },
-    {
-      title: "How to Use AI Chat Effectively",
-      slug: "ai-chat-effectively",
-      views: 9840
-    },
-    {
-      title: "Document Organization Best Practices",
-      slug: "document-organization",
-      views: 8650
-    },
-    {
-      title: "Security and Privacy Settings",
-      slug: "security-privacy",
-      views: 7320
-    }
+    { title: "Getting Started with MindVault", slug: "getting-started", views: 12420 },
+    { title: "How to Use AI Chat Effectively", slug: "ai-chat-effectively", views: 9840 },
+    { title: "Document Organization Best Practices", slug: "document-organization", views: 8650 },
+    { title: "Security and Privacy Settings", slug: "security-privacy", views: 7320 }
   ]
 
   const recentUpdates = [
-    {
-      title: "New Collaboration Features",
-      description: "Learn about our latest team collaboration tools",
-      date: "2 days ago",
-      type: "New Feature"
-    },
-    {
-      title: "Improved Search Algorithm",
-      description: "Our search is now 40% faster and more accurate",
-      date: "1 week ago",
-      type: "Improvement"
-    },
-    {
-      title: "Mobile App Release",
-      description: "MindVault is now available on iOS and Android",
-      date: "2 weeks ago",
-      type: "Release"
-    }
+    { title: "New Collaboration Features", description: "Learn about our latest team collaboration tools", date: "2 days ago", type: "New Feature" },
+    { title: "Improved Search Algorithm", description: "Our search is now 40% faster and more accurate", date: "1 week ago", type: "Improvement" },
+    { title: "Mobile App Release", description: "MindVault is now available on iOS and Android", date: "2 weeks ago", type: "Release" }
   ]
 
   return (
@@ -179,7 +150,7 @@ export default function DocsPage() {
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
             Everything you need to know about using MindVault effectively
           </p>
-          
+
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -205,27 +176,21 @@ export default function DocsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-medium mt-0.5">1</div>
-                    <div>
-                      <h3 className="font-medium">Create Your Account</h3>
-                      <p className="text-sm text-gray-300">Sign up and set up your profile</p>
+                  {["Create Your Account", "Upload Your Documents", "Start Chatting with AI"].map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-medium mt-0.5">
+                        {i + 1}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{step}</h3>
+                        <p className="text-sm text-gray-300">
+                          {i === 0 ? "Sign up and set up your profile" :
+                            i === 1 ? "Add PDF or TXT files to your knowledge vault" :
+                              "Ask questions and get insights from your documents"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-medium mt-0.5">2</div>
-                    <div>
-                      <h3 className="font-medium">Upload Your Documents</h3>
-                      <p className="text-sm text-gray-300">Add PDF or TXT files to your knowledge vault</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-medium mt-0.5">3</div>
-                    <div>
-                      <h3 className="font-medium">Start Chatting with AI</h3>
-                      <p className="text-sm text-gray-300">Ask questions and get insights from your documents</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -235,15 +200,26 @@ export default function DocsPage() {
               {filteredDocumentation.map((category, index) => (
                 <div key={index}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-10 h-10 rounded-lg ${category.color === 'text-indigo-400' ? 'bg-indigo-500/10' : category.color === 'text-purple-400' ? 'bg-purple-500/10' : category.color === 'text-green-400' ? 'bg-green-500/10' : 'bg-yellow-500/10'} flex items-center justify-center`}>
+                    <div className={`w-10 h-10 rounded-lg ${
+                      category.color === "text-indigo-400"
+                        ? "bg-indigo-500/10"
+                        : category.color === "text-purple-400"
+                        ? "bg-purple-500/10"
+                        : category.color === "text-green-400"
+                        ? "bg-green-500/10"
+                        : "bg-yellow-500/10"
+                    } flex items-center justify-center`}>
                       <category.icon className={`h-5 w-5 ${category.color}`} />
                     </div>
                     <h2 className="text-2xl font-bold text-white">{category.category}</h2>
                   </div>
-                  
+
                   <div className="grid gap-4">
                     {category.articles.map((article, articleIndex) => (
-                      <Card key={articleIndex} className="bg-black/20 border-white/10 text-white hover:border-indigo-400/30 transition-all duration-300">
+                      <Card
+                        key={articleIndex}
+                        className="bg-black/20 border-white/10 text-white hover:border-indigo-400/30 transition-all duration-300"
+                      >
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">

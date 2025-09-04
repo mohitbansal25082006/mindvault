@@ -38,10 +38,10 @@ export default function SupportPage() {
         reset()
         toast.success("Your message has been sent successfully!")
       } else {
-        const error = await response.json()
-        toast.error(error.error || "Failed to send message")
+        const err = await response.json()
+        toast.error(err.error || "Failed to send message")
       }
-    } catch (error) {
+    } catch {
       toast.error("Something went wrong. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -70,7 +70,7 @@ export default function SupportPage() {
               </div>
               <h1 className="text-3xl font-bold mb-4">Message Sent Successfully!</h1>
               <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-                Thank you for reaching out to MindVault Support. We've received your message and will get back to you within 24 hours.
+                Thank you for reaching out to MindVault Support. We&apos;ve received your message and will get back to you within 24 hours.
               </p>
               
               <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 max-w-2xl mx-auto mb-8">
@@ -82,11 +82,11 @@ export default function SupportPage() {
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>We'll review your request and assign it to the appropriate team member</span>
+                    <span>We&apos;ll review your request and assign it to the appropriate team member</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>You'll receive a response within 24 hours</span>
+                    <span>You&apos;ll receive a response within 24 hours</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
@@ -141,7 +141,7 @@ export default function SupportPage() {
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">Support Center</h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            We're here to help you get the most out of MindVault. Find answers, contact support, or connect with our community.
+            We&apos;re here to help you get the most out of MindVault. Find answers, contact support, or connect with our community.
           </p>
         </div>
 
@@ -246,7 +246,7 @@ export default function SupportPage() {
                 <div className="space-y-3">
                   <div className="p-3 bg-white/5 rounded-lg">
                     <h4 className="font-medium mb-1">How do I upload documents?</h4>
-                    <p className="text-sm text-gray-300">You can upload documents by going to the Documents page and clicking "New Document". You can upload PDF or TXT files up to 10MB.</p>
+                    <p className="text-sm text-gray-300">You can upload documents by going to the Documents page and clicking &quot;New Document&quot;. You can upload PDF or TXT files up to 10MB.</p>
                   </div>
                   
                   <div className="p-3 bg-white/5 rounded-lg">

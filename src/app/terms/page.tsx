@@ -41,7 +41,11 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p>By accessing and using MindVault, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using MindVault's particular services, you shall be subject to any posted guidelines or rules applicable to such services.</p>
+              <p>
+                By accessing and using MindVault, you accept and agree to be bound by the terms and provision of this
+                agreement. In addition, when using MindVault&apos;s particular services, you shall be subject to any
+                posted guidelines or rules applicable to such services.
+              </p>
             </CardContent>
           </Card>
 
@@ -54,13 +58,19 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p>Permission is granted to temporarily download one copy of MindVault's materials for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:</p>
+              <p>
+                Permission is granted to temporarily download one copy of MindVault&apos;s materials for personal,
+                non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and
+                under this license you may not:
+              </p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>Modify or copy the materials</li>
                 <li>Use the materials for any commercial purpose</li>
                 <li>Attempt to decompile or reverse engineer any software contained on MindVault</li>
                 <li>Remove any copyright or other proprietary notations from the materials</li>
-                <li>Transfer the materials to another person or "mirror" the materials on any other server</li>
+                <li>
+                  Transfer the materials to another person or &quot;mirror&quot; the materials on any other server
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -74,7 +84,12 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p>The materials on MindVault are provided on an 'as is' basis. MindVault makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+              <p>
+                The materials on MindVault are provided on an &apos;as is&apos; basis. MindVault makes no warranties,
+                expressed or implied, and hereby disclaims and negates all other warranties including without
+                limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or
+                non-infringement of intellectual property or other violation of rights.
+              </p>
             </CardContent>
           </Card>
 
@@ -87,7 +102,12 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p>In no event shall MindVault or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on MindVault, even if MindVault or a MindVault authorized representative has been notified orally or in writing of the possibility of such damage.</p>
+              <p>
+                In no event shall MindVault or its suppliers be liable for any damages (including, without limitation,
+                damages for loss of data or profit, or due to business interruption) arising out of the use or inability
+                to use the materials on MindVault, even if MindVault or a MindVault authorized representative has been
+                notified orally or in writing of the possibility of such damage.
+              </p>
             </CardContent>
           </Card>
 
@@ -100,7 +120,12 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p>The materials appearing on MindVault could include technical, typographical, or photographic errors. MindVault does not warrant that any of the materials on its website are accurate, complete, or current. MindVault may make changes to the materials contained on its website at any time without notice. However, MindVault does not make any commitment to update the materials.</p>
+              <p>
+                The materials appearing on MindVault could include technical, typographical, or photographic errors.
+                MindVault does not warrant that any of the materials on its website are accurate, complete, or current.
+                MindVault may make changes to the materials contained on its website at any time without notice.
+                However, MindVault does not make any commitment to update the materials.
+              </p>
             </CardContent>
           </Card>
 
@@ -113,8 +138,16 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p>Our service allows you to post, link, store, share and otherwise make available certain information, text, graphics, or other material ("User Content"). You are responsible for your User Content and the consequences of posting it.</p>
-              <p>By posting User Content, you grant MindVault a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, adapt, publish, and display such content solely for the purpose of providing, promoting, and improving our services.</p>
+              <p>
+                Our service allows you to post, link, store, share and otherwise make available certain information,
+                text, graphics, or other material (&quot;User Content&quot;). You are responsible for your User Content
+                and the consequences of posting it.
+              </p>
+              <p>
+                By posting User Content, you grant MindVault a worldwide, non-exclusive, royalty-free license to use,
+                reproduce, modify, adapt, publish, and display such content solely for the purpose of providing,
+                promoting, and improving our services.
+              </p>
             </CardContent>
           </Card>
 
@@ -127,7 +160,11 @@ export default function TermsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p>We may terminate or suspend access to our service immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms. Upon termination, your right to use the service will cease immediately.</p>
+              <p>
+                We may terminate or suspend access to our service immediately, without prior notice or liability, for
+                any reason whatsoever, including without limitation if you breach the Terms. Upon termination, your
+                right to use the service will cease immediately.
+              </p>
             </CardContent>
           </Card>
 
@@ -137,7 +174,10 @@ export default function TermsPage() {
               <CardTitle>Governing Law</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which MindVault operates, without regard to its conflict of law provisions.</p>
+              <p>
+                These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which
+                MindVault operates, without regard to its conflict of law provisions.
+              </p>
             </CardContent>
           </Card>
 
@@ -147,7 +187,11 @@ export default function TermsPage() {
               <CardTitle>Changes</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
+              <p>
+                We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a
+                revision is material, we will try to provide at least 30 days notice prior to any new terms taking
+                effect. What constitutes a material change will be determined at our sole discretion.
+              </p>
             </CardContent>
           </Card>
 
@@ -157,14 +201,23 @@ export default function TermsPage() {
               <CardTitle>Contact Us</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>If you have any questions about these Terms, please contact us at terms@mindvault.app or visit our <Link href="/support" className="text-indigo-400 hover:text-indigo-300">Support page</Link>.</p>
+              <p>
+                If you have any questions about these Terms, please contact us at terms@mindvault.app or visit our{" "}
+                <Link href="/support" className="text-indigo-400 hover:text-indigo-300">
+                  Support page
+                </Link>
+                .
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Last Updated */}
         <div className="text-center text-gray-400 mt-12">
-          <p>Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p>
+            Last updated:{" "}
+            {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          </p>
         </div>
       </div>
     </div>
