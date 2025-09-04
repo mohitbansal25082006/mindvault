@@ -9,12 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useSession } from "next-auth/react"
-import { User, Mail, Calendar, FileText, Loader2, Save, AlertTriangle } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useSession, signOut } from "next-auth/react"
+import { User, Mail, Calendar, FileText, Loader2, Save, AlertTriangle, Trash2 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { toast } from "sonner"
 import { z } from "zod"
 import { formatDistanceToNow } from "date-fns"
+import { useRouter } from "next/navigation"
 
 const ProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -22,6 +25,13 @@ const ProfileSchema = z.object({
 })
 
 type ProfileData = z.infer<typeof ProfileSchema>
+
+// Make password optional in schema, enforce when needed client-side
+const DeleteAccountSchema = z.object({
+  password: z.string().optional(),
+})
+
+type DeleteAccountData = z.infer<typeof DeleteAccountSchema>
 
 interface UserProfile {
   id: string
@@ -32,22 +42,45 @@ interface UserProfile {
   _count: {
     documents: number
   }
+  hasPassword?: boolean
 }
 
 export function SettingsInterface() {
   const { data: session, update } = useSession()
+  const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<ProfileData>({
     resolver: zodResolver(ProfileSchema)
   })
-  
+
+  const {
+    register: registerDelete,
+    handleSubmit: handleSubmitDelete,
+    reset: resetDelete,
+    getValues: getDeleteValues,
+    formState: { errors: deleteErrors }
+  } = useForm<DeleteAccountData>({
+    resolver: zodResolver(DeleteAccountSchema)
+  })
+
   useEffect(() => {
     fetchProfile()
   }, [])
-  
+
+  // Reset delete form each time dialog opens
+  useEffect(() => {
+    if (isDeleteDialogOpen) {
+      resetDelete()
+    }
+  }, [isDeleteDialogOpen])
+
   const fetchProfile = async () => {
+    setIsLoading(true)
     try {
       const response = await fetch("/api/user/profile")
       if (response.ok) {
@@ -61,12 +94,13 @@ export function SettingsInterface() {
         toast.error("Failed to load profile")
       }
     } catch (error) {
-      toast.error("Something went wrong")
+      console.error("fetchProfile error:", error)
+      toast.error("Something went wrong while loading profile")
     } finally {
       setIsLoading(false)
     }
   }
-  
+
   const onSubmit = async (data: ProfileData) => {
     setIsSaving(true)
     try {
@@ -75,37 +109,77 @@ export function SettingsInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-      
+
       if (response.ok) {
         const updatedProfile = await response.json()
-        setProfile({ ...profile!, ...updatedProfile })
-        
-        // Update session with the new name
-        await update({
-          ...session,
-          user: {
-            ...session?.user,
-            name: data.name,
-            email: data.email,
-          }
-        })
-        
-        // Force a refresh of the session to ensure all components get the updated data
-        // This triggers the JWT callback with trigger="update" in auth.ts
-        await update()
-        
+        setProfile(prev => ({ ...prev!, ...updatedProfile } as UserProfile))
+
+        try {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              name: data.name,
+              email: data.email,
+            }
+          })
+          await update()
+        } catch (e) {
+          console.warn("session update error:", e)
+        }
+
         toast.success("Profile updated successfully!")
       } else {
-        const error = await response.json()
-        toast.error(error.message || "Failed to update profile")
+        const err = await response.json()
+        toast.error(err.message || "Failed to update profile")
       }
     } catch (error) {
+      console.error("update profile error:", error)
       toast.error("Something went wrong")
     } finally {
       setIsSaving(false)
     }
   }
-  
+
+  const onDeleteAccount = async (data: DeleteAccountData) => {
+    // Determine if the user actually has a password stored
+    const userHasPassword = profile?.hasPassword ?? false
+
+    // If user has password, enforce presence on client side
+    if (userHasPassword && !data.password) {
+      toast.error("Please enter your password to delete your account")
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const body = userHasPassword ? { password: data.password } : {}
+      const response = await fetch("/api/user/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+
+      if (response.ok) {
+        setIsDeleteDialogOpen(false)
+        toast.success("Your account has been deleted successfully")
+        // Sign out and redirect
+        await signOut({ callbackUrl: "/" })
+      } else {
+        let errJson = { error: "Failed to delete account" } as any
+        try {
+          errJson = await response.json()
+        } catch (e) {}
+        toast.error(errJson.error || "Failed to delete account")
+      }
+    } catch (error) {
+      console.error("onDeleteAccount error:", error)
+      toast.error("Something went wrong while deleting your account")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -113,7 +187,7 @@ export function SettingsInterface() {
       </div>
     )
   }
-  
+
   if (!profile) {
     return (
       <div className="text-center py-12">
@@ -122,7 +196,12 @@ export function SettingsInterface() {
       </div>
     )
   }
-  
+
+  // Prefer backend-provided hasPassword flag. Fallback heuristic as last resort.
+  const hasPassword = typeof profile.hasPassword === "boolean"
+    ? profile.hasPassword
+    : !(session?.user?.email?.includes("gmail.com") || session?.user?.email?.includes("github.com"))
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -132,7 +211,7 @@ export function SettingsInterface() {
           Manage your account settings and preferences
         </p>
       </div>
-      
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile Overview */}
         <Card className="lg:col-span-1">
@@ -149,6 +228,9 @@ export function SettingsInterface() {
               </Avatar>
               <h3 className="text-xl font-semibold">{profile.name}</h3>
               <p className="text-muted-foreground">{profile.email}</p>
+              <Badge variant="outline" className="mt-2">
+                {hasPassword ? "Password Account" : "OAuth Account"}
+              </Badge>
             </div>
             <Separator />
             <div className="space-y-3">
@@ -161,7 +243,7 @@ export function SettingsInterface() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -174,7 +256,7 @@ export function SettingsInterface() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Settings Forms */}
         <div className="lg:col-span-2 space-y-6">
           {/* Profile Settings */}
@@ -202,7 +284,7 @@ export function SettingsInterface() {
                     <p className="text-red-500 text-sm">{errors.name.message}</p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
@@ -219,7 +301,7 @@ export function SettingsInterface() {
                     <p className="text-red-500 text-sm">{errors.email.message}</p>
                   )}
                 </div>
-                
+
                 <div className="flex justify-end">
                   <Button type="submit" disabled={!isDirty || isSaving}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -230,7 +312,7 @@ export function SettingsInterface() {
               </form>
             </CardContent>
           </Card>
-          
+
           {/* Appearance Settings */}
           <Card>
             <CardHeader>
@@ -251,7 +333,7 @@ export function SettingsInterface() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Account Statistics */}
           <Card>
             <CardHeader>
@@ -277,7 +359,7 @@ export function SettingsInterface() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Danger Zone */}
           <Card className="border-red-200 dark:border-red-800">
             <CardHeader>
@@ -295,13 +377,75 @@ export function SettingsInterface() {
                     Permanently delete your account and all associated data
                   </p>
                 </div>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => toast.error("Account deletion is not implemented in this demo")}
-                >
-                  Delete Account
-                </Button>
+
+                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Account
+                    </Button>
+                  </DialogTrigger>
+
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="text-red-600 dark:text-red-400">Delete Account</DialogTitle>
+                      <DialogDescription>
+                        This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Wrap the delete dialog in a real form so react-hook-form captures inputs reliably */}
+                    <form onSubmit={handleSubmitDelete(onDeleteAccount)} className="space-y-4 py-4">
+                      <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          Deleting your account will remove all your documents, chats, and other associated data. This action is irreversible.
+                        </AlertDescription>
+                      </Alert>
+
+                      {hasPassword && (
+                        <div className="space-y-2">
+                          <Label htmlFor="password">Confirm your password to delete your account</Label>
+                          <Input
+                            {...registerDelete("password")}
+                            id="password"
+                            type="password"
+                            placeholder="Enter your password"
+                          />
+                          {deleteErrors.password && (
+                            <p className="text-red-500 text-sm">{deleteErrors.password.message}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {!hasPassword && (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            You're using an OAuth account. Deleting your account will permanently remove your access to this service.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          type="submit"
+                          disabled={isDeleting}
+                        >
+                          {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Delete Account
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>

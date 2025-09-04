@@ -17,6 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Select password so we can compute hasPassword, but do NOT return raw password
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -25,6 +26,7 @@ export async function GET() {
         email: true,
         image: true,
         createdAt: true,
+        password: true,
         _count: {
           select: {
             documents: true,
@@ -37,7 +39,18 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    return NextResponse.json(user)
+    // Build safe response without exposing hashed password
+    const responsePayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      createdAt: user.createdAt,
+      _count: user._count,
+      hasPassword: !!user.password,
+    }
+
+    return NextResponse.json(responsePayload)
   } catch (error) {
     console.error("Profile fetch error:", error)
     return NextResponse.json(
