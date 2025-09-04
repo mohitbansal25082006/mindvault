@@ -45,33 +45,45 @@ export function ForumPostDetail({ postId }: { postId: string }) {
   const [editingComment, setEditingComment] = useState<string | null>(null)
   const [editCommentContent, setEditCommentContent] = useState("")
   const [isUpdatingComment, setIsUpdatingComment] = useState(false)
+  const [deletingComment, setDeletingComment] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPost()
     fetchComments()
     incrementViewCount()
-  }, [postId])
+    // Re-run when session changes in case like state should be rechecked
+  }, [postId, session?.user?.id])
 
   const fetchPost = async () => {
+    setIsLoading(true)
     try {
       const response = await fetch(`/api/forum/posts/${postId}`)
       if (response.ok) {
         const data = await response.json()
         setPost(data)
-        setLikeCount(data._count.likes)
+        const likes = data?._count?.likes ?? 0
+        setLikeCount(likes)
         
         // Check if user has liked the post
         if (session?.user?.id) {
-          const likeResponse = await fetch(`/api/forum/likes?postId=${postId}&userId=${session.user.id}`)
-          if (likeResponse.ok) {
-            const likeData = await likeResponse.json()
-            setIsLiked(likeData.isLiked)
+          try {
+            const likeResponse = await fetch(`/api/forum/likes?postId=${postId}&userId=${session.user.id}`)
+            if (likeResponse.ok) {
+              const likeData = await likeResponse.json()
+              setIsLiked(Boolean(likeData?.isLiked))
+            } else {
+              // not fatal; just continue
+              console.warn("Failed to fetch like status", likeResponse.status)
+            }
+          } catch (err) {
+            console.warn("Error fetching like status:", err)
           }
         }
       } else {
         toast.error("Failed to load post")
       }
     } catch (error) {
+      console.error("fetchPost error:", error)
       toast.error("Something went wrong")
     } finally {
       setIsLoading(false)
@@ -84,8 +96,11 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       if (response.ok) {
         const data = await response.json()
         setComments(data)
+      } else {
+        console.warn("Failed to load comments", response.status)
       }
     } catch (error) {
+      console.error("fetchComments error:", error)
       toast.error("Failed to load comments")
     }
   }
@@ -138,9 +153,12 @@ export function ForumPostDetail({ postId }: { postId: string }) {
 
       if (response.ok) {
         setIsLiked(!isLiked)
-        setLikeCount(isLiked ? likeCount - 1 : likeCount + 1)
+        setLikeCount(prev => (isLiked ? Math.max(0, prev - 1) : prev + 1))
+      } else {
+        toast.error("Failed to update like")
       }
     } catch (error) {
+      console.error("handleLike error:", error)
       toast.error("Failed to update like")
     }
   }
@@ -171,12 +189,13 @@ export function ForumPostDetail({ postId }: { postId: string }) {
 
       if (response.ok) {
         setCommentContent("")
-        fetchComments()
+        await fetchComments()
         toast.success("Comment added successfully!")
       } else {
         toast.error("Failed to add comment")
       }
     } catch (error) {
+      console.error("handleCommentSubmit error:", error)
       toast.error("Something went wrong")
     } finally {
       setIsSubmittingComment(false)
@@ -211,19 +230,28 @@ export function ForumPostDetail({ postId }: { postId: string }) {
               isLiked: !isCurrentlyLiked,
               _count: {
                 ...comment._count,
-                likes: isCurrentlyLiked ? comment._count.likes - 1 : comment._count.likes + 1
+                likes: isCurrentlyLiked ? Math.max(0, comment._count.likes - 1) : comment._count.likes + 1
               }
             }
           }
           return comment
         }))
+      } else {
+        toast.error("Failed to update like")
       }
     } catch (error) {
+      console.error("handleLikeComment error:", error)
       toast.error("Failed to update like")
     }
   }
 
   const startEditComment = (comment: ForumComment) => {
+    // Only allow editing if the user is the comment author
+    if (session?.user?.id !== comment.user.id) {
+      toast.error("You can only edit your own comments")
+      return
+    }
+    
     setEditingComment(comment.id)
     setEditCommentContent(comment.content)
   }
@@ -247,35 +275,49 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       if (response.ok) {
         setEditingComment(null)
         setEditCommentContent("")
-        fetchComments()
+        await fetchComments()
         toast.success("Comment updated successfully!")
       } else {
-        toast.error("Failed to update comment")
+        const error = await response.json()
+        toast.error(error?.error || "Failed to update comment")
       }
     } catch (error) {
+      console.error("handleUpdateComment error:", error)
       toast.error("Something went wrong")
     } finally {
       setIsUpdatingComment(false)
     }
   }
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (!confirm("Are you sure you want to delete this comment?")) {
+  const confirmDeleteComment = (commentId: string) => {
+    // Only allow deletion if the user is the comment author
+    const comment = comments.find(c => c.id === commentId)
+    if (session?.user?.id !== comment?.user.id) {
+      toast.error("You can only delete your own comments")
       return
     }
+    
+    setDeletingComment(commentId)
+  }
+
+  const handleDeleteComment = async () => {
+    if (!deletingComment) return
 
     try {
-      const response = await fetch(`/api/forum/comments/${commentId}`, {
+      const response = await fetch(`/api/forum/comments/${deletingComment}`, {
         method: "DELETE",
       })
 
       if (response.ok) {
-        setComments(comments.filter(comment => comment.id !== commentId))
+        setComments(comments.filter(comment => comment.id !== deletingComment))
+        setDeletingComment(null)
         toast.success("Comment deleted successfully!")
       } else {
-        toast.error("Failed to delete comment")
+        const error = await response.json()
+        toast.error(error?.error || "Failed to delete comment")
       }
     } catch (error) {
+      console.error("handleDeleteComment error:", error)
       toast.error("Something went wrong")
     }
   }
@@ -283,20 +325,45 @@ export function ForumPostDetail({ postId }: { postId: string }) {
   const handleShare = async () => {
     if (!post) return
 
+    const url = `${window.location.origin}/forum/post/${postId}`
+    const title = `MindVault Forum: ${post.title ?? "Post"}`
+
     try {
-      const url = `${window.location.origin}/forum/post/${postId}`
-      
-      if (navigator.share) {
-        await navigator.share({
-          title: `MindVault Forum: ${post.title}`,
-          url: url,
-        })
-      } else {
-        // Fallback: copy to clipboard
+      // Try Web Share API first (will only be available in some browsers / platforms)
+      if (navigator.share && typeof navigator.share === "function") {
+        try {
+          await navigator.share({ title, url })
+          toast.success("Post shared successfully!")
+          return
+        } catch (err) {
+          // If user cancels or the API throws for any reason, fall back to clipboard
+          console.warn("Web Share API failed or cancelled — falling back to clipboard", err)
+        }
+      }
+
+      // Fallback: use Clipboard API if available
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
         await navigator.clipboard.writeText(url)
         toast.success("Link copied to clipboard!")
+        return
+      }
+
+      // Last-resort fallback: create a temporary input and use execCommand
+      const input = document.createElement("input")
+      input.value = url
+      document.body.appendChild(input)
+      input.select()
+      try {
+        document.execCommand("copy")
+        toast.success("Link copied to clipboard!")
+      } catch (err) {
+        console.error("execCommand copy failed:", err)
+        toast.error("Failed to copy link")
+      } finally {
+        document.body.removeChild(input)
       }
     } catch (error) {
+      console.error("handleShare error:", error)
       toast.error("Failed to share post")
     }
   }
@@ -313,6 +380,10 @@ export function ForumPostDetail({ postId }: { postId: string }) {
     } catch {
       return "Invalid date"
     }
+  }
+
+  const isCommentAuthor = (commentUserId: string) => {
+    return session?.user?.id === commentUserId
   }
 
   if (isLoading) {
@@ -383,6 +454,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                 {likeCount}
               </Button>
               <Button variant="ghost" size="sm" onClick={handleShare}>
+                <Share className="h-4 w-4 mr-1" />
                 Share
               </Button>
             </div>
@@ -402,7 +474,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
             </div>
             <div className="flex items-center gap-1">
               <MessageCircle className="h-4 w-4" />
-              <span>{post._count.comments} comments</span>
+              <span>{post._count?.comments ?? 0} comments</span>
             </div>
             <div className="flex items-center gap-1">
               <Heart className="h-4 w-4" />
@@ -468,31 +540,36 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                         <span className="text-sm text-muted-foreground">
                           {formatDateSafely(comment.createdAt)}
                         </span>
+                        {isCommentAuthor(comment.user.id) && (
+                          <Badge variant="secondary" className="text-xs">
+                            You
+                          </Badge>
+                        )}
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {session?.user?.id === comment.user.id && (
-                            <>
-                              <DropdownMenuItem onClick={() => startEditComment(comment)}>
-                                <Edit3 className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      
+                      {/* Only show dropdown menu if user is the comment author */}
+                      {isCommentAuthor(comment.user.id) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => startEditComment(comment)}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => confirmDeleteComment(comment.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                     
                     {editingComment === comment.id ? (
@@ -536,7 +613,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                         className={comment.isLiked ? "text-red-500" : ""}
                       >
                         <Heart className={`h-4 w-4 mr-1 ${comment.isLiked ? "fill-current" : ""}`} />
-                        {comment._count.likes}
+                        {comment._count?.likes ?? 0}
                       </Button>
                     </div>
                   </div>
@@ -550,6 +627,26 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingComment} onOpenChange={() => setDeletingComment(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Comment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this comment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingComment(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteComment}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
