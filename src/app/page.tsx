@@ -1,6 +1,7 @@
 "use client"
 import { Suspense } from "react"
 import { useSession } from "next-auth/react"
+import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturesSection } from "@/components/features-section"
@@ -42,9 +43,9 @@ export default function HomePage() {
               © 2025 MindVault. Built with Next.js 15, TypeScript & AI.
             </p>
             <div className="flex justify-center space-x-6">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Terms</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Support</a>
+              <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms</Link>
+              <Link href="/support" className="text-gray-400 hover:text-white transition-colors">Support</Link>
             </div>
           </div>
         </div>
