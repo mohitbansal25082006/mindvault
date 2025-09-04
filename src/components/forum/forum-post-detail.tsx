@@ -1,5 +1,7 @@
+// E:\mindvault\src\components\forum\forum-post-detail.tsx
 "use client"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ForumPostDetail({ postId }: { postId: string }) {
+  const router = useRouter()
   const { data: session } = useSession()
   const [post, setPost] = useState<ForumPost | null>(null)
   const [comments, setComments] = useState<ForumComment[]>([])
@@ -46,6 +49,10 @@ export function ForumPostDetail({ postId }: { postId: string }) {
   const [editCommentContent, setEditCommentContent] = useState("")
   const [isUpdatingComment, setIsUpdatingComment] = useState(false)
   const [deletingComment, setDeletingComment] = useState<string | null>(null)
+
+  // New states for deleting post
+  const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false)
+  const [isDeletingPost, setIsDeletingPost] = useState(false)
 
   useEffect(() => {
     fetchPost()
@@ -378,6 +385,64 @@ export function ForumPostDetail({ postId }: { postId: string }) {
     }
   }
 
+  // New: determine if current user is the post author
+  const isPostAuthor = (post && session?.user?.id) ? session.user.id === post.user.id : false
+
+  // New: confirm deletion (open dialog)
+  const confirmDeletePost = () => {
+    if (!isPostAuthor) {
+      toast.error("Only the post author can delete this post")
+      return
+    }
+    setDeletePostDialogOpen(true)
+  }
+
+  // New: handle delete post with robust retry (no body -> with body)
+  const handleDeletePost = async () => {
+    if (!post) return
+    if (!isPostAuthor) {
+      toast.error("Only the post author can delete this post")
+      return
+    }
+
+    setIsDeletingPost(true)
+    try {
+      let response = await fetch(`/api/forum/posts/${postId}`, { method: "DELETE" })
+
+      if (!response.ok) {
+        // Retry with JSON body (some servers expect a body on DELETE)
+        console.warn("Initial DELETE failed, retrying with body", response.status)
+        try {
+          response = await fetch(`/api/forum/posts/${postId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: session?.user?.id }),
+          })
+        } catch (err) {
+          console.error("Retry DELETE with body threw:", err)
+          response = undefined as any
+        }
+      }
+
+      if (response && response.ok) {
+        toast.success("Post deleted successfully!")
+        // Navigate back to forum list after deletion
+        router.push("/forum")
+      } else {
+        const status = response ? response.status : "no-response"
+        const text = response ? await safeReadText(response) : ""
+        console.error("Delete post failed:", status, text)
+        toast.error("Failed to delete post")
+      }
+    } catch (error) {
+      console.error("handleDeletePost error:", error)
+      toast.error("Something went wrong")
+    } finally {
+      setIsDeletingPost(false)
+      setDeletePostDialogOpen(false)
+    }
+  }
+
   const handleShare = async () => {
     if (!post) return
 
@@ -513,6 +578,22 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                 <Share className="h-4 w-4 mr-1" />
                 Share
               </Button>
+
+              {/* Only show delete post button if current user is the post author */}
+              {isPostAuthor && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={confirmDeletePost}
+                    className="text-red-600"
+                    disabled={isDeletingPost}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -684,7 +765,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Comment Confirmation Dialog */}
       <Dialog open={!!deletingComment} onOpenChange={() => setDeletingComment(null)}>
         <DialogContent>
           <DialogHeader>
@@ -699,6 +780,26 @@ export function ForumPostDetail({ postId }: { postId: string }) {
             </Button>
             <Button variant="destructive" onClick={handleDeleteComment}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Post Confirmation Dialog (only for author) */}
+      <Dialog open={deletePostDialogOpen} onOpenChange={setDeletePostDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this post? This action cannot be undone and will remove all associated comments.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletePostDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeletePost} disabled={isDeletingPost}>
+              {isDeletingPost ? "Deleting..." : "Delete Post"}
             </Button>
           </DialogFooter>
         </DialogContent>
