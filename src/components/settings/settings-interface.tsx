@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,6 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { toast } from "sonner"
 import { z } from "zod"
 import { formatDistanceToNow } from "date-fns"
-import { useRouter } from "next/navigation"
 
 const ProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -45,9 +44,13 @@ interface UserProfile {
   hasPassword?: boolean
 }
 
+interface ErrorResponse {
+  error?: string
+  message?: string
+}
+
 export function SettingsInterface() {
   const { data: session, update } = useSession()
-  const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -62,29 +65,17 @@ export function SettingsInterface() {
     register: registerDelete,
     handleSubmit: handleSubmitDelete,
     reset: resetDelete,
-    getValues: getDeleteValues,
     formState: { errors: deleteErrors }
   } = useForm<DeleteAccountData>({
     resolver: zodResolver(DeleteAccountSchema)
   })
 
-  useEffect(() => {
-    fetchProfile()
-  }, [])
-
-  // Reset delete form each time dialog opens
-  useEffect(() => {
-    if (isDeleteDialogOpen) {
-      resetDelete()
-    }
-  }, [isDeleteDialogOpen])
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch("/api/user/profile")
       if (response.ok) {
-        const data = await response.json()
+        const data: UserProfile = await response.json()
         setProfile(data)
         reset({
           name: data.name || "",
@@ -99,7 +90,18 @@ export function SettingsInterface() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [reset])
+
+  useEffect(() => {
+    fetchProfile()
+  }, [fetchProfile])
+
+  // Reset delete form each time dialog opens
+  useEffect(() => {
+    if (isDeleteDialogOpen) {
+      resetDelete()
+    }
+  }, [isDeleteDialogOpen, resetDelete])
 
   const onSubmit = async (data: ProfileData) => {
     setIsSaving(true)
@@ -124,13 +126,13 @@ export function SettingsInterface() {
             }
           })
           await update()
-        } catch (e) {
-          console.warn("session update error:", e)
+        } catch (err) {
+          console.warn("session update error:", err)
         }
 
         toast.success("Profile updated successfully!")
       } else {
-        const err = await response.json()
+        const err: ErrorResponse = await response.json()
         toast.error(err.message || "Failed to update profile")
       }
     } catch (error) {
@@ -145,7 +147,6 @@ export function SettingsInterface() {
     // Determine if the user actually has a password stored
     const userHasPassword = profile?.hasPassword ?? false
 
-    // If user has password, enforce presence on client side
     if (userHasPassword && !data.password) {
       toast.error("Please enter your password to delete your account")
       return
@@ -163,13 +164,14 @@ export function SettingsInterface() {
       if (response.ok) {
         setIsDeleteDialogOpen(false)
         toast.success("Your account has been deleted successfully")
-        // Sign out and redirect
         await signOut({ callbackUrl: "/" })
       } else {
-        let errJson = { error: "Failed to delete account" } as any
+        let errJson: ErrorResponse = { error: "Failed to delete account" }
         try {
           errJson = await response.json()
-        } catch (e) {}
+        } catch {
+          // ignore
+        }
         toast.error(errJson.error || "Failed to delete account")
       }
     } catch (error) {
@@ -197,7 +199,6 @@ export function SettingsInterface() {
     )
   }
 
-  // Prefer backend-provided hasPassword flag. Fallback heuristic as last resort.
   const hasPassword = typeof profile.hasPassword === "boolean"
     ? profile.hasPassword
     : !(session?.user?.email?.includes("gmail.com") || session?.user?.email?.includes("github.com"))
@@ -397,7 +398,6 @@ export function SettingsInterface() {
                       </DialogDescription>
                     </DialogHeader>
 
-                    {/* Wrap the delete dialog in a real form so react-hook-form captures inputs reliably */}
                     <form onSubmit={handleSubmitDelete(onDeleteAccount)} className="space-y-4 py-4">
                       <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
@@ -425,7 +425,7 @@ export function SettingsInterface() {
                         <Alert>
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription>
-                            You're using an OAuth account. Deleting your account will permanently remove your access to this service.
+                            You&apos;re using an OAuth account. Deleting your account will permanently remove your access to this service.
                           </AlertDescription>
                         </Alert>
                       )}

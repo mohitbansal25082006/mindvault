@@ -3,6 +3,11 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
+// Define the request body type
+interface DeleteAccountBody {
+  password?: string
+}
+
 /**
  * POST /api/user/delete-account
  * Body: { password?: string }
@@ -17,14 +22,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // parse JSON body safely
-    let body: any = {}
+    // Parse JSON body safely
+    let body: DeleteAccountBody = {}
     try {
-      body = await request.json()
-    } catch (e) {
+      body = (await request.json()) as DeleteAccountBody
+    } catch {
       body = {}
     }
-    const password = typeof body?.password === "string" ? body.password : undefined
+
+    const password = typeof body.password === "string" ? body.password : undefined
     console.log("[delete-account] body received, hasPasswordProvided:", !!password)
 
     // Fetch user's hashed password (if any)
