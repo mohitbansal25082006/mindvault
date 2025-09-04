@@ -92,14 +92,14 @@ export async function POST(request: NextRequest) {
               </div>
             </div>
             
-            <p>If you need immediate assistance, please check our <a href="https://mindvault.app/support" style="color: #4f46e5;">Support Center</a> or <a href="https://mindvault.app/docs" style="color: #4f46e5;">Documentation</a>.</p>
+            <p>If you need immediate assistance, please check our <a href="https://mindvault-three.vercel.app/support" style="color: #4f46e5;">Support Center</a> or <a href="https://mindvault-three.vercel.app/docs" style="color: #4f46e5;">Documentation</a>.</p>
           </div>
           
           <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; text-align: center;">
             <p style="margin: 0; color: #6b7280;">While you wait, why not explore our features?</p>
             <div style="margin-top: 15px;">
-              <a href="https://mindvault.app/features" style="display: inline-block; background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin: 0 5px;">Explore Features</a>
-              <a href="https://mindvault.app/docs" style="display: inline-block; background-color: #f3f4f6; color: #4f46e5; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin: 0 5px;">Read Documentation</a>
+              <a href="https://mindvault-three.vercel.app/features" style="display: inline-block; background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin: 0 5px;">Explore Features</a>
+              <a href="https://mindvault-three.vercel.app/docs" style="display: inline-block; background-color: #f3f4f6; color: #4f46e5; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin: 0 5px;">Read Documentation</a>
             </div>
           </div>
           
