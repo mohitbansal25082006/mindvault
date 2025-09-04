@@ -115,16 +115,18 @@ export function SettingsInterface() {
         const updatedProfile = await response.json()
         setProfile(prev => ({ ...prev!, ...updatedProfile } as UserProfile))
         try {
-          await update({
-            ...session,
-            user: {
-              ...session?.user,
-              name: data.name,
-              email: data.email,
-              image: updatedProfile.image || session?.user?.image,
-            }
-          })
-          await update()
+          // Update session user object if session update is available
+          if (update) {
+            await update({
+              ...session,
+              user: {
+                ...session?.user,
+                name: data.name,
+                email: data.email,
+                image: updatedProfile.image || session?.user?.image,
+              }
+            })
+          }
         } catch (err) {
           console.warn("session update error:", err)
         }
@@ -423,7 +425,8 @@ export function SettingsInterface() {
                         </Alert>
                       )}
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                        {/* IMPORTANT: set type="button" so this Cancel button DOES NOT submit the form */}
+                        <Button variant="outline" type="button" onClick={() => setIsDeleteDialogOpen(false)}>
                           Cancel
                         </Button>
                         <Button 
@@ -446,3 +449,5 @@ export function SettingsInterface() {
     </div>
   )
 }
+
+export default SettingsInterface
