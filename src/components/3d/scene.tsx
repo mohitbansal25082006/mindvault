@@ -9,18 +9,18 @@ function FloatingBrain() {
     <Float speed={2} rotationIntensity={1} floatIntensity={2}>
       <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[1.2, 32, 32]} />
-        <meshStandardMaterial 
-          color="#6366f1" 
-          wireframe 
-          transparent 
+        <meshStandardMaterial
+          color="#6366f1"
+          wireframe
+          transparent
           opacity={0.6}
         />
       </mesh>
       <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[1, 24, 24]} />
-        <meshStandardMaterial 
-          color="#8b5cf6" 
-          transparent 
+        <meshStandardMaterial
+          color="#8b5cf6"
+          transparent
           opacity={0.3}
         />
       </mesh>
@@ -47,11 +47,11 @@ function FloatingText() {
 
 function Particles() {
   return (
-    <Stars 
-      radius={300} 
-      depth={60} 
-      count={1000} 
-      factor={7} 
+    <Stars
+      radius={300}
+      depth={60}
+      count={1000}
+      factor={7}
       saturation={0.5}
       fade
       speed={0.5}
@@ -61,7 +61,8 @@ function Particles() {
 
 export default function Scene3D() {
   return (
-    <div className="fixed inset-0 -z-10">
+    // pointer-events-none so canvas doesn't trap clicks/hover; keep behind content with -z-10
+    <div className="fixed inset-0 -z-10 pointer-events-none" aria-hidden="true">
       <Canvas
         camera={{ position: [0, 0, 8], fov: 45 }}
         style={{ background: 'transparent' }}
@@ -70,11 +71,11 @@ export default function Scene3D() {
           <ambientLight intensity={0.6} />
           <pointLight position={[10, 10, 10]} intensity={1} />
           <pointLight position={[-10, -10, -10]} intensity={0.5} color="#6366f1" />
-          
+
           <Particles />
           <FloatingBrain />
           <FloatingText />
-          
+
           <OrbitControls
             enableZoom={false}
             enablePan={false}

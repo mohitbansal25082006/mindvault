@@ -26,31 +26,39 @@ export function HeroSection({ isAuthenticated }: HeroSectionProps) {
   
   return (
     <>
-      <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      {/* ensure there's top padding so nav (if fixed) doesn't overlap the hero content */}
+      <section className="min-h-screen flex items-center justify-center relative overflow-hidden pt-24 md:pt-28 lg:pt-32">
+        {/* keep hero content above the 3D scene with a high z-index */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-20">
           {/* Badge */}
-          <div className="mb-8">
-            <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-4 py-2">
+          <div className="mb-6">
+            <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-4 py-2 inline-flex items-center">
               <Sparkles className="w-4 h-4 mr-2" />
               AI-Powered Knowledge Management
             </Badge>
           </div>
           
-          {/* Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+          {/* Headline - use clamp for responsive scaling and constrain width */}
+          <h1
+            className="font-bold text-white mb-6 leading-tight break-words whitespace-normal"
+            style={{
+              // fallback clamp sizing in case Tailwind isn't configured for arbitrary values
+              fontSize: "clamp(2.25rem, 5.5vw, 4.5rem)",
+              lineHeight: 1.02,
+              maxWidth: "min(100%, 1100px)"
+            }}
+          >
             {isAuthenticated ? (
               <>
-                Welcome Back to Your
-                <br />
-                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <span className="block text-[clamp(2.25rem,3.8vw,3.6rem)] md:text-[clamp(3rem,4.4vw,4.8rem)] lg:text-[clamp(3.5rem,5.2vw,6.0rem)]">Welcome Back to Your</span>
+                <span className="block text-[clamp(2.75rem,6.2vw,5.5rem)] md:text-[clamp(3.8rem,7.2vw,6.5rem)] lg:text-[clamp(4.5rem,8.2vw,7.5rem)] bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                   Knowledge Vault
                 </span>
               </>
             ) : (
               <>
-                Your Personal
-                <br />
-                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <span className="block text-[clamp(2.25rem,3.8vw,3.6rem)] md:text-[clamp(3rem,4.4vw,4.8rem)] lg:text-[clamp(3.5rem,5.2vw,6.0rem)]">Your Personal</span>
+                <span className="block text-[clamp(2.75rem,6.2vw,5.5rem)] md:text-[clamp(3.8rem,7.2vw,6.5rem)] lg:text-[clamp(4.5rem,8.2vw,7.5rem)] bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                   Knowledge Vault
                 </span>
               </>
@@ -58,7 +66,7 @@ export function HeroSection({ isAuthenticated }: HeroSectionProps) {
           </h1>
           
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
             {isAuthenticated ? (
               "Continue building your intelligent knowledge base with AI-powered search and organization."
             ) : (
@@ -116,7 +124,7 @@ export function HeroSection({ isAuthenticated }: HeroSectionProps) {
         </div>
         
         {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-20">
           <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
             <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse"></div>
           </div>
