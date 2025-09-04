@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,17 +10,22 @@ import { Badge } from "@/components/ui/badge"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ContactSchema, ContactData } from "@/lib/validations"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, MessageCircle, BookOpen, Mail, Phone, Send, CheckCircle, Clock, Users, Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function SupportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const { data: session } = useSession()
+  const router = useRouter()
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactData>({
     resolver: zodResolver(ContactSchema),
   })
-
+  
   const onSubmit = async (data: ContactData) => {
     setIsSubmitting(true)
     try {
@@ -32,7 +36,6 @@ export default function SupportPage() {
         },
         body: JSON.stringify(data),
       })
-
       if (response.ok) {
         setIsSubmitted(true)
         reset()
@@ -47,7 +50,15 @@ export default function SupportPage() {
       setIsSubmitting(false)
     }
   }
-
+  
+  const handleJoinCommunity = () => {
+    if (session) {
+      router.push("/forum")
+    } else {
+      setShowLoginPrompt(true)
+    }
+  }
+  
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900">
@@ -60,7 +71,6 @@ export default function SupportPage() {
               </Button>
             </Link>
           </div>
-
           <Card className="bg-black/20 border-white/10 text-white">
             <CardContent className="text-center py-16">
               <div className="flex justify-center mb-6">
@@ -118,7 +128,7 @@ export default function SupportPage() {
       </div>
     )
   }
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -131,7 +141,7 @@ export default function SupportPage() {
             </Button>
           </Link>
         </div>
-
+        
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-4">
@@ -144,7 +154,7 @@ export default function SupportPage() {
             We&apos;re here to help you get the most out of MindVault. Find answers, contact support, or connect with our community.
           </p>
         </div>
-
+        
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Contact Form */}
           <div className="lg:col-span-2">
@@ -233,7 +243,7 @@ export default function SupportPage() {
                 </form>
               </CardContent>
             </Card>
-
+            
             {/* FAQs */}
             <Card className="bg-black/20 border-white/10 text-white mt-8">
               <CardHeader>
@@ -267,7 +277,7 @@ export default function SupportPage() {
               </CardContent>
             </Card>
           </div>
-
+          
           {/* Support Options */}
           <div className="space-y-6">
             {/* Contact Methods */}
@@ -293,7 +303,7 @@ export default function SupportPage() {
                 </div>
               </CardContent>
             </Card>
-
+            
             {/* Community */}
             <Card className="bg-black/20 border-white/10 text-white">
               <CardHeader>
@@ -304,12 +314,16 @@ export default function SupportPage() {
               </CardHeader>
               <CardContent>
                 <p className="mb-3">Join our community of users to share tips, ask questions, and connect with other MindVault users.</p>
-                <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-white/20 text-white hover:bg-white/10"
+                  onClick={handleJoinCommunity}
+                >
                   Join Community
                 </Button>
               </CardContent>
             </Card>
-
+            
             {/* Status */}
             <Card className="bg-black/20 border-white/10 text-white">
               <CardHeader>
@@ -335,7 +349,7 @@ export default function SupportPage() {
                 </div>
               </CardContent>
             </Card>
-
+            
             {/* Response Time */}
             <Card className="bg-black/20 border-white/10 text-white">
               <CardHeader>
@@ -361,7 +375,7 @@ export default function SupportPage() {
                 </div>
               </CardContent>
             </Card>
-
+            
             {/* Emergency Contact */}
             <Card className="bg-red-500/10 border-red-500/30 text-white">
               <CardHeader>
@@ -382,6 +396,31 @@ export default function SupportPage() {
           </div>
         </div>
       </div>
+      
+      {/* Login Prompt Dialog */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+        <DialogContent className="bg-black/80 border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Users className="h-5 w-5 text-indigo-400" />
+              Login Required
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300 mb-6">
+              You need to be logged in to join our community. Please sign in to access the forum.
+            </p>
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => setShowLoginPrompt(false)}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Got it
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
