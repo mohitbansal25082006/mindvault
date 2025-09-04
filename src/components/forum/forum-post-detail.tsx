@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ForumPost, ForumComment } from "@/types"
 import { 
   ArrowLeft, 
@@ -18,12 +19,19 @@ import {
   Clock,
   Edit3,
   Trash2,
-  Send
+  Send,
+  MoreHorizontal
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function ForumPostDetail({ postId }: { postId: string }) {
   const { data: session } = useSession()
@@ -34,6 +42,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
+  const [editingComment, setEditingComment] = useState<string | null>(null)
+  const [editCommentContent, setEditCommentContent] = useState("")
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false)
 
   useEffect(() => {
     fetchPost()
@@ -81,9 +92,29 @@ export function ForumPostDetail({ postId }: { postId: string }) {
 
   const incrementViewCount = async () => {
     try {
-      await fetch(`/api/forum/posts/${postId}/views`, {
-        method: "POST",
-      })
+      // Only increment if the user hasn't viewed this post recently
+      const viewedPosts = JSON.parse(localStorage.getItem('viewedForumPosts') || '[]')
+      
+      if (!viewedPosts.includes(postId)) {
+        await fetch(`/api/forum/posts/${postId}/views`, {
+          method: "POST",
+        })
+        
+        // Add to viewed posts and set expiration (24 hours)
+        viewedPosts.push(postId)
+        localStorage.setItem('viewedForumPosts', JSON.stringify(viewedPosts))
+        
+        // Set expiration to clear after 24 hours
+        const expiresAt = Date.now() + (24 * 60 * 60 * 1000)
+        localStorage.setItem('viewedForumPostsExpires', expiresAt.toString())
+      }
+      
+      // Check if we need to clear expired entries
+      const expiresAt = localStorage.getItem('viewedForumPostsExpires')
+      if (expiresAt && parseInt(expiresAt) < Date.now()) {
+        localStorage.removeItem('viewedForumPosts')
+        localStorage.removeItem('viewedForumPostsExpires')
+      }
     } catch (error) {
       console.error("Error incrementing view count:", error)
     }
@@ -149,6 +180,124 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       toast.error("Something went wrong")
     } finally {
       setIsSubmittingComment(false)
+    }
+  }
+
+  const handleLikeComment = async (commentId: string) => {
+    if (!session?.user?.id) {
+      toast.error("Please sign in to like comments")
+      return
+    }
+
+    try {
+      const comment = comments.find(c => c.id === commentId)
+      const isCurrentlyLiked = comment?.isLiked || false
+      
+      const response = await fetch("/api/forum/likes", {
+        method: isCurrentlyLiked ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commentId,
+          userId: session.user.id,
+        }),
+      })
+
+      if (response.ok) {
+        // Update the comment in the local state
+        setComments(comments.map(comment => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              isLiked: !isCurrentlyLiked,
+              _count: {
+                ...comment._count,
+                likes: isCurrentlyLiked ? comment._count.likes - 1 : comment._count.likes + 1
+              }
+            }
+          }
+          return comment
+        }))
+      }
+    } catch (error) {
+      toast.error("Failed to update like")
+    }
+  }
+
+  const startEditComment = (comment: ForumComment) => {
+    setEditingComment(comment.id)
+    setEditCommentContent(comment.content)
+  }
+
+  const handleUpdateComment = async () => {
+    if (!editingComment || !editCommentContent.trim()) {
+      toast.error("Comment cannot be empty")
+      return
+    }
+
+    setIsUpdatingComment(true)
+    try {
+      const response = await fetch(`/api/forum/comments/${editingComment}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: editCommentContent.trim(),
+        }),
+      })
+
+      if (response.ok) {
+        setEditingComment(null)
+        setEditCommentContent("")
+        fetchComments()
+        toast.success("Comment updated successfully!")
+      } else {
+        toast.error("Failed to update comment")
+      }
+    } catch (error) {
+      toast.error("Something went wrong")
+    } finally {
+      setIsUpdatingComment(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/forum/comments/${commentId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setComments(comments.filter(comment => comment.id !== commentId))
+        toast.success("Comment deleted successfully!")
+      } else {
+        toast.error("Failed to delete comment")
+      }
+    } catch (error) {
+      toast.error("Something went wrong")
+    }
+  }
+
+  const handleShare = async () => {
+    if (!post) return
+
+    try {
+      const url = `${window.location.origin}/forum/post/${postId}`
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: `MindVault Forum: ${post.title}`,
+          url: url,
+        })
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(url)
+        toast.success("Link copied to clipboard!")
+      }
+    } catch (error) {
+      toast.error("Failed to share post")
     }
   }
 
@@ -233,8 +382,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                 <Heart className={`h-4 w-4 mr-1 ${isLiked ? "fill-current" : ""}`} />
                 {likeCount}
               </Button>
-              <Button variant="ghost" size="sm">
-                <Share className="h-4 w-4 mr-1" />
+              <Button variant="ghost" size="sm" onClick={handleShare}>
                 Share
               </Button>
             </div>
@@ -314,32 +462,82 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium">{comment.user.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatDateSafely(comment.createdAt)}
-                      </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{comment.user.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDateSafely(comment.createdAt)}
+                        </span>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {session?.user?.id === comment.user.id && (
+                            <>
+                              <DropdownMenuItem onClick={() => startEditComment(comment)}>
+                                <Edit3 className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <p className="whitespace-pre-wrap">{comment.content}</p>
-                    </div>
+                    
+                    {editingComment === comment.id ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={editCommentContent}
+                          onChange={(e) => setEditCommentContent(e.target.value)}
+                          rows={3}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setEditingComment(null)
+                              setEditCommentContent("")
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={handleUpdateComment}
+                            disabled={isUpdatingComment || !editCommentContent.trim()}
+                          >
+                            {isUpdatingComment ? "Updating..." : "Update"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <p className="whitespace-pre-wrap">{comment.content}</p>
+                      </div>
+                    )}
+                    
                     <div className="flex items-center gap-4 mt-2">
-                      <Button variant="ghost" size="sm">
-                        <Heart className={`h-4 w-4 mr-1 ${comment.isLiked ? "fill-current text-red-500" : ""}`} />
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleLikeComment(comment.id)}
+                        className={comment.isLiked ? "text-red-500" : ""}
+                      >
+                        <Heart className={`h-4 w-4 mr-1 ${comment.isLiked ? "fill-current" : ""}`} />
                         {comment._count.likes}
                       </Button>
-                      {session?.user?.id === comment.user.id && (
-                        <>
-                          <Button variant="ghost" size="sm">
-                            <Edit3 className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>

@@ -19,7 +19,8 @@ import {
   Filter,
   Users,
   TrendingUp,
-  Calendar
+  Calendar,
+  Share
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
@@ -28,6 +29,11 @@ import { toast } from "sonner"
 export function ForumHomepage() {
   const [posts, setPosts] = useState<ForumPost[]>([])
   const [categories, setCategories] = useState<ForumCategory[]>([])
+  const [forumStats, setForumStats] = useState({
+    totalUsers: 1248,
+    totalPosts: 324,
+    totalComments: 1842
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -36,8 +42,8 @@ export function ForumHomepage() {
 
   useEffect(() => {
     fetchCategories()
+    fetchForumStats()
     fetchPosts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchCategories = async () => {
@@ -46,7 +52,6 @@ export function ForumHomepage() {
       if (response.ok) {
         const data = await response.json()
         setCategories(data)
-        console.log("Categories loaded:", data) // Debug log
       } else {
         toast.error("Failed to load categories")
       }
@@ -56,11 +61,24 @@ export function ForumHomepage() {
     }
   }
 
+  const fetchForumStats = async () => {
+    try {
+      const response = await fetch("/api/forum/stats")
+      if (response.ok) {
+        const data = await response.json()
+        setForumStats(data)
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error)
+      // Use default stats if API fails
+    }
+  }
+
   const fetchPosts = async () => {
     setIsLoading(true)
     try {
       let url = "/api/forum/posts?"
-
+      
       if (activeTab === "my") {
         url += "my=true&"
       } else if (activeTab === "popular") {
@@ -68,24 +86,21 @@ export function ForumHomepage() {
       } else if (activeTab === "unanswered") {
         url += "unanswered=true&"
       }
-
+      
       if (selectedCategory !== "all") {
         url += `categoryId=${selectedCategory}&`
       }
-
+      
       url += `sort=${sortBy}`
-
+      
       if (searchQuery) {
         url += `&q=${encodeURIComponent(searchQuery)}`
       }
-
-      console.log("Fetching posts from:", url) // Debug log
-
+      
       const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setPosts(data)
-        console.log("Posts loaded:", data) // Debug log
       } else {
         toast.error("Failed to load posts")
       }
@@ -110,11 +125,10 @@ export function ForumHomepage() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value)
-    setTimeout(fetchPosts, 100) // Small delay to ensure state is updated
+    setTimeout(fetchPosts, 100)
   }
 
   const handleCategoryChange = (value: string) => {
-    console.log("Category changed to:", value) // Debug log
     setSelectedCategory(value)
     setTimeout(fetchPosts, 100)
   }
@@ -124,9 +138,28 @@ export function ForumHomepage() {
     setTimeout(fetchPosts, 100)
   }
 
+  const handleShare = async (postId: string, title: string) => {
+    try {
+      const url = `${window.location.origin}/forum/post/${postId}`
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: `MindVault Forum: ${title}`,
+          url: url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        toast.success("Link copied to clipboard!")
+      }
+    } catch (error) {
+      console.error("Error sharing post:", error)
+      toast.error("Failed to share post")
+    }
+  }
+
   const formatDateSafely = (dateString: string | undefined | null) => {
     if (!dateString) return "Unknown date"
-
+    
     try {
       const date = new Date(dateString)
       if (isNaN(date.getTime())) {
@@ -164,7 +197,7 @@ export function ForumHomepage() {
               <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">1,248</p>
+              <p className="text-2xl font-bold">{forumStats.totalUsers.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Community Members</p>
             </div>
           </CardContent>
@@ -175,7 +208,7 @@ export function ForumHomepage() {
               <MessageCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">324</p>
+              <p className="text-2xl font-bold">{forumStats.totalPosts.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Forum Posts</p>
             </div>
           </CardContent>
@@ -186,7 +219,7 @@ export function ForumHomepage() {
               <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">1,842</p>
+              <p className="text-2xl font-bold">{forumStats.totalComments.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Comments</p>
             </div>
           </CardContent>
@@ -214,20 +247,15 @@ export function ForumHomepage() {
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Category:</span>
-
-              {/* Improved Select styling so placeholder and selection are visible */}
               <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                <SelectTrigger className="min-w-[180px] bg-white/5 border border-white/10 text-white rounded-md h-10 px-3">
+                <SelectTrigger className="w-40">
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        {category.icon && <span className="text-lg">{category.icon}</span>}
-                        <span>{category.name}</span>
-                      </div>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -237,7 +265,7 @@ export function ForumHomepage() {
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Sort by:</span>
               <Select value={sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger className="min-w-[160px] bg-white/5 border border-white/10 text-white rounded-md h-10 px-3">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -282,15 +310,19 @@ export function ForumHomepage() {
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold">
-                                <Link
-                                  href={`/forum/post/${post.id}`}
+                                <Link 
+                                  href={`/forum/post/${post.id}`} 
                                   className="hover:text-primary"
                                 >
                                   {post.title}
                                 </Link>
                               </h3>
-                              {post.isPinned && <Pin className="h-4 w-4 text-red-500" />}
-                              {post.isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
+                              {post.isPinned && (
+                                <Pin className="h-4 w-4 text-red-500" />
+                              )}
+                              {post.isLocked && (
+                                <Lock className="h-4 w-4 text-muted-foreground" />
+                              )}
                             </div>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
                               <span>by {post.user.name}</span>
@@ -315,6 +347,14 @@ export function ForumHomepage() {
                               <Heart className="h-4 w-4" />
                               <span>{post._count.likes}</span>
                             </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleShare(post.id, post.title)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Share className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
