@@ -45,3 +45,6 @@ next-env.d.ts
 .vercel
 uploads/*
 !uploads/.gitkeep
+
+public/profile-images/*
+!public/profile-images/.gitkeep

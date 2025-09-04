@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
 import { useSession, signOut } from "next-auth/react"
-import { User, Mail, Calendar, FileText, Loader2, Save, AlertTriangle, Trash2 } from "lucide-react"
+import { User, Mail, Calendar, FileText, Loader2, Save, AlertTriangle, Trash2, Upload, Camera } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -56,6 +57,9 @@ export function SettingsInterface() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<ProfileData>({
     resolver: zodResolver(ProfileSchema)
@@ -123,6 +127,7 @@ export function SettingsInterface() {
               ...session?.user,
               name: data.name,
               email: data.email,
+              image: updatedProfile.image || session?.user?.image,
             }
           })
           await update()
@@ -182,6 +187,83 @@ export function SettingsInterface() {
     }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file")
+      return
+    }
+
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB")
+      return
+    }
+
+    setSelectedFile(file)
+  }
+
+  const uploadProfileImage = async () => {
+    if (!selectedFile) return
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const formData = new FormData()
+      formData.append("image", selectedFile)
+
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90))
+      }, 200)
+
+      const response = await fetch("/api/user/profile-image", {
+        method: "POST",
+        body: formData,
+      })
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Update profile state
+        setProfile(prev => prev ? { ...prev, image: data.imageUrl } : null)
+        
+        // Update session
+        await update({
+          ...session,
+          user: {
+            ...session?.user,
+            image: data.imageUrl,
+          }
+        })
+        
+        toast.success("Profile image updated successfully!")
+        setSelectedFile(null)
+        
+        // Reset file input
+        const fileInput = document.getElementById("profile-image-input") as HTMLInputElement
+        if (fileInput) {
+          fileInput.value = ""
+        }
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Failed to upload image")
+      }
+    } catch (error) {
+      toast.error("Something went wrong")
+    } finally {
+      setIsUploading(false)
+      setTimeout(() => setUploadProgress(0), 1000)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -221,18 +303,64 @@ export function SettingsInterface() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center text-center">
-              <Avatar className="w-20 h-20 mb-4">
-                <AvatarImage src={profile.image || ""} />
-                <AvatarFallback className="text-2xl">
-                  {profile.name?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="w-20 h-20 mb-4">
+                  <AvatarImage src={profile.image || ""} />
+                  <AvatarFallback className="text-2xl">
+                    {profile.name?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <label 
+                  htmlFor="profile-image-input" 
+                  className="absolute bottom-0 right-0 bg-primary rounded-full p-1 cursor-pointer hover:bg-primary/90 transition-colors"
+                >
+                  <Camera className="h-4 w-4 text-white" />
+                </label>
+                <input
+                  id="profile-image-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
               <h3 className="text-xl font-semibold">{profile.name}</h3>
               <p className="text-muted-foreground">{profile.email}</p>
               <Badge variant="outline" className="mt-2">
                 {hasPassword ? "Password Account" : "OAuth Account"}
               </Badge>
             </div>
+            
+            {selectedFile && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Selected Image:</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {selectedFile.name}
+                </div>
+                <Button 
+                  onClick={uploadProfileImage} 
+                  disabled={isUploading}
+                  className="w-full"
+                  size="sm"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Image
+                    </>
+                  )}
+                </Button>
+                {isUploading && (
+                  <Progress value={uploadProgress} className="w-full" />
+                )}
+              </div>
+            )}
+            
             <Separator />
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -291,13 +419,16 @@ export function SettingsInterface() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      {...register("email")}
+                      value={profile.email}
                       id="email"
                       type="email"
-                      placeholder="Enter your email"
-                      className="pl-10"
+                      disabled
+                      className="pl-10 bg-muted/50"
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed. Contact support if you need to update your email.
+                  </p>
                   {errors.email && (
                     <p className="text-red-500 text-sm">{errors.email.message}</p>
                   )}
