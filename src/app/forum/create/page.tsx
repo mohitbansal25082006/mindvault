@@ -68,9 +68,9 @@ export default function CreatePostPage() {
     }
   }
 
-  const handleCreateCategory = async (e?: React.FormEvent | null) => {
+  const handleCreateCategory = async (e?: React.FormEvent) => {
     // allow either being called from a button (no event) or a form submit (event)
-    if (e && typeof (e as any).preventDefault === "function") (e as any).preventDefault()
+    if (e && typeof e.preventDefault === "function") e.preventDefault()
     if (!newCatName.trim()) {
       toast.error("Category name is required")
       return
@@ -275,7 +275,7 @@ export default function CreatePostPage() {
                         Cancel
                       </Button>
                       <Button
-                        onClick={() => handleCreateCategory(null)}
+                        onClick={() => handleCreateCategory()}
                         disabled={isAddingCategory}
                         type="button"
                       >

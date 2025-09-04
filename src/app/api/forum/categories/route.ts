@@ -2,27 +2,36 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 
+type CategoryBody = {
+  name: string
+  description?: string
+  icon?: string
+  color?: string
+}
+
+// Define the Prisma error structure
+interface PrismaError extends Error {
+  code?: string
+  meta?: Record<string, unknown>
+}
+
 /**
  * Helper: call a function that uses Prisma, retrying once on connection-pool timeout (P2024).
- * On P2024 we attempt to disconnect/connect and retry once with a small backoff.
  */
 async function retryOnPoolError<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn()
-  } catch (err: any) {
-    // Prisma pool timeout error code
-    if (err?.code === "P2024") {
-      console.warn("Prisma pool timeout detected. Attempting reconnect and retry...", err?.meta ?? {})
+  } catch (err: unknown) {
+    const prismaError = err as PrismaError
+    if (prismaError.code === "P2024") {
+      console.warn("Prisma pool timeout detected. Attempting reconnect and retry...", prismaError.meta ?? {})
       try {
-        // Try to recover: disconnect then connect, then retry once
         try {
           await prisma.$disconnect()
         } catch (dErr) {
-          // ignore disconnect errors
           console.warn("prisma.$disconnect() failed:", dErr)
         }
 
-        // small backoff before reconnect
         await new Promise((r) => setTimeout(r, 300))
 
         try {
@@ -31,18 +40,15 @@ async function retryOnPoolError<T>(fn: () => Promise<T>): Promise<T> {
           console.warn("prisma.$connect() failed:", cErr)
         }
 
-        // small backoff before retrying the query
         await new Promise((r) => setTimeout(r, 200))
 
         return await fn()
-      } catch (retryErr: any) {
-        // If retry also fails, rethrow so caller can handle
+      } catch (retryErr: unknown) {
         console.error("Retry after reconnect failed:", retryErr)
         throw retryErr
       }
     }
 
-    // not a pool error — rethrow
     throw err
   }
 }
@@ -56,9 +62,9 @@ export async function GET() {
     )
 
     return NextResponse.json(categories)
-  } catch (error: any) {
-    // If it's still a pool timeout, return 503 with helpful message
-    if (error?.code === "P2024") {
+  } catch (error: unknown) {
+    const prismaError = error as PrismaError
+    if (prismaError.code === "P2024") {
       console.error("Prisma pool timeout (after retry):", error)
       return NextResponse.json(
         {
@@ -81,26 +87,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { name, description, icon, color } = await request.json()
+    const body: CategoryBody = await request.json()
 
-    if (!name) {
+    if (!body.name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 })
     }
 
     const category = await retryOnPoolError(() =>
       prisma.forumCategory.create({
         data: {
-          name,
-          description,
-          icon,
-          color,
+          name: body.name,
+          description: body.description,
+          icon: body.icon,
+          color: body.color,
         },
       })
     )
 
     return NextResponse.json(category, { status: 201 })
-  } catch (error: any) {
-    if (error?.code === "P2024") {
+  } catch (error: unknown) {
+    const prismaError = error as PrismaError
+    if (prismaError.code === "P2024") {
       console.error("Prisma pool timeout (after retry) creating category:", error)
       return NextResponse.json(
         {
