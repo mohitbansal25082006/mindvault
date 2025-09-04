@@ -48,17 +48,8 @@ export function Navigation() {
               <span className="text-xl font-bold text-white">MindVault</span>
             </div>
             
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation (Features/About/Pricing removed) */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-300 hover:text-white transition-colors">
-                Features
-              </a>
-              <a href="#about" className="text-gray-300 hover:text-white transition-colors">
-                About
-              </a>
-              <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">
-                Pricing
-              </a>
               <ModeToggle />
               
               {status === "loading" ? (
@@ -137,19 +128,10 @@ export function Navigation() {
           </div>
         </div>
         
-        {/* Mobile Menu */}
+        {/* Mobile Menu (Features/About/Pricing removed) */}
         {isMenuOpen && (
           <div className="md:hidden bg-black/30 backdrop-blur-md border-t border-white/10">
             <div className="px-4 py-2 space-y-2">
-              <a href="#features" className="block py-2 text-gray-300 hover:text-white">
-                Features
-              </a>
-              <a href="#about" className="block py-2 text-gray-300 hover:text-white">
-                About
-              </a>
-              <a href="#pricing" className="block py-2 text-gray-300 hover:text-white">
-                Pricing
-              </a>
               <div className="flex items-center justify-between pt-2">
                 <ModeToggle />
                 {status === "loading" ? (
