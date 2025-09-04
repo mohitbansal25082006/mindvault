@@ -11,9 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
 import { useSession, signOut } from "next-auth/react"
-import { User, Mail, Calendar, FileText, Loader2, Save, AlertTriangle, Trash2, Upload, Camera } from "lucide-react"
+import { User, Mail, Calendar, FileText, Loader2, Save, AlertTriangle, Trash2 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -57,14 +56,11 @@ export function SettingsInterface() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-
+  
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<ProfileData>({
     resolver: zodResolver(ProfileSchema)
   })
-
+  
   const {
     register: registerDelete,
     handleSubmit: handleSubmitDelete,
@@ -115,11 +111,9 @@ export function SettingsInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-
       if (response.ok) {
         const updatedProfile = await response.json()
         setProfile(prev => ({ ...prev!, ...updatedProfile } as UserProfile))
-
         try {
           await update({
             ...session,
@@ -134,7 +128,6 @@ export function SettingsInterface() {
         } catch (err) {
           console.warn("session update error:", err)
         }
-
         toast.success("Profile updated successfully!")
       } else {
         const err: ErrorResponse = await response.json()
@@ -151,12 +144,11 @@ export function SettingsInterface() {
   const onDeleteAccount = async (data: DeleteAccountData) => {
     // Determine if the user actually has a password stored
     const userHasPassword = profile?.hasPassword ?? false
-
     if (userHasPassword && !data.password) {
       toast.error("Please enter your password to delete your account")
       return
     }
-
+    
     setIsDeleting(true)
     try {
       const body = userHasPassword ? { password: data.password } : {}
@@ -165,7 +157,6 @@ export function SettingsInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
-
       if (response.ok) {
         setIsDeleteDialogOpen(false)
         toast.success("Your account has been deleted successfully")
@@ -184,83 +175,6 @@ export function SettingsInterface() {
       toast.error("Something went wrong while deleting your account")
     } finally {
       setIsDeleting(false)
-    }
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      toast.error("Please select an image file")
-      return
-    }
-
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size must be less than 5MB")
-      return
-    }
-
-    setSelectedFile(file)
-  }
-
-  const uploadProfileImage = async () => {
-    if (!selectedFile) return
-
-    setIsUploading(true)
-    setUploadProgress(0)
-
-    try {
-      const formData = new FormData()
-      formData.append("image", selectedFile)
-
-      // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90))
-      }, 200)
-
-      const response = await fetch("/api/user/profile-image", {
-        method: "POST",
-        body: formData,
-      })
-
-      clearInterval(progressInterval)
-      setUploadProgress(100)
-
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Update profile state
-        setProfile(prev => prev ? { ...prev, image: data.imageUrl } : null)
-        
-        // Update session
-        await update({
-          ...session,
-          user: {
-            ...session?.user,
-            image: data.imageUrl,
-          }
-        })
-        
-        toast.success("Profile image updated successfully!")
-        setSelectedFile(null)
-        
-        // Reset file input
-        const fileInput = document.getElementById("profile-image-input") as HTMLInputElement
-        if (fileInput) {
-          fileInput.value = ""
-        }
-      } else {
-        const error = await response.json()
-        toast.error(error.error || "Failed to upload image")
-      }
-    } catch (error) {
-      toast.error("Something went wrong")
-    } finally {
-      setIsUploading(false)
-      setTimeout(() => setUploadProgress(0), 1000)
     }
   }
 
@@ -294,7 +208,7 @@ export function SettingsInterface() {
           Manage your account settings and preferences
         </p>
       </div>
-
+      
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile Overview */}
         <Card className="lg:col-span-1">
@@ -303,27 +217,12 @@ export function SettingsInterface() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center text-center">
-              <div className="relative">
-                <Avatar className="w-20 h-20 mb-4">
-                  <AvatarImage src={profile.image || ""} />
-                  <AvatarFallback className="text-2xl">
-                    {profile.name?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <label 
-                  htmlFor="profile-image-input" 
-                  className="absolute bottom-0 right-0 bg-primary rounded-full p-1 cursor-pointer hover:bg-primary/90 transition-colors"
-                >
-                  <Camera className="h-4 w-4 text-white" />
-                </label>
-                <input
-                  id="profile-image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </div>
+              <Avatar className="w-20 h-20 mb-4">
+                <AvatarImage src={profile.image || ""} />
+                <AvatarFallback className="text-2xl">
+                  {profile.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
               <h3 className="text-xl font-semibold">{profile.name}</h3>
               <p className="text-muted-foreground">{profile.email}</p>
               <Badge variant="outline" className="mt-2">
@@ -331,37 +230,8 @@ export function SettingsInterface() {
               </Badge>
             </div>
             
-            {selectedFile && (
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Selected Image:</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {selectedFile.name}
-                </div>
-                <Button 
-                  onClick={uploadProfileImage} 
-                  disabled={isUploading}
-                  className="w-full"
-                  size="sm"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Image
-                    </>
-                  )}
-                </Button>
-                {isUploading && (
-                  <Progress value={uploadProgress} className="w-full" />
-                )}
-              </div>
-            )}
-            
             <Separator />
+            
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -372,7 +242,6 @@ export function SettingsInterface() {
                   </p>
                 </div>
               </div>
-
               <div className="flex items-center gap-3">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -385,7 +254,7 @@ export function SettingsInterface() {
             </div>
           </CardContent>
         </Card>
-
+        
         {/* Settings Forms */}
         <div className="lg:col-span-2 space-y-6">
           {/* Profile Settings */}
@@ -413,7 +282,6 @@ export function SettingsInterface() {
                     <p className="text-red-500 text-sm">{errors.name.message}</p>
                   )}
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
@@ -433,7 +301,6 @@ export function SettingsInterface() {
                     <p className="text-red-500 text-sm">{errors.email.message}</p>
                   )}
                 </div>
-
                 <div className="flex justify-end">
                   <Button type="submit" disabled={!isDirty || isSaving}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -444,7 +311,7 @@ export function SettingsInterface() {
               </form>
             </CardContent>
           </Card>
-
+          
           {/* Appearance Settings */}
           <Card>
             <CardHeader>
@@ -465,7 +332,7 @@ export function SettingsInterface() {
               </div>
             </CardContent>
           </Card>
-
+          
           {/* Account Statistics */}
           <Card>
             <CardHeader>
@@ -491,7 +358,7 @@ export function SettingsInterface() {
               </div>
             </CardContent>
           </Card>
-
+          
           {/* Danger Zone */}
           <Card className="border-red-200 dark:border-red-800">
             <CardHeader>
@@ -509,7 +376,6 @@ export function SettingsInterface() {
                     Permanently delete your account and all associated data
                   </p>
                 </div>
-
                 <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
@@ -520,7 +386,6 @@ export function SettingsInterface() {
                       Delete Account
                     </Button>
                   </DialogTrigger>
-
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle className="text-red-600 dark:text-red-400">Delete Account</DialogTitle>
@@ -528,7 +393,6 @@ export function SettingsInterface() {
                         This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
                       </DialogDescription>
                     </DialogHeader>
-
                     <form onSubmit={handleSubmitDelete(onDeleteAccount)} className="space-y-4 py-4">
                       <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
@@ -536,7 +400,6 @@ export function SettingsInterface() {
                           Deleting your account will remove all your documents, chats, and other associated data. This action is irreversible.
                         </AlertDescription>
                       </Alert>
-
                       {hasPassword && (
                         <div className="space-y-2">
                           <Label htmlFor="password">Confirm your password to delete your account</Label>
@@ -551,7 +414,6 @@ export function SettingsInterface() {
                           )}
                         </div>
                       )}
-
                       {!hasPassword && (
                         <Alert>
                           <AlertTriangle className="h-4 w-4" />
@@ -560,7 +422,6 @@ export function SettingsInterface() {
                           </AlertDescription>
                         </Alert>
                       )}
-
                       <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
                           Cancel
