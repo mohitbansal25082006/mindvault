@@ -78,6 +78,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           } catch (err) {
             console.warn("Error fetching like status:", err)
           }
+        } else {
+          // ensure like state is reset when no session
+          setIsLiked(false)
         }
       } else {
         toast.error("Failed to load post")
@@ -135,31 +138,84 @@ export function ForumPostDetail({ postId }: { postId: string }) {
     }
   }
 
+  /**
+   * Robust like/unlike handler.
+   * - When liking: POST /api/forum/likes with JSON body
+   * - When unliking: attempt DELETE /api/forum/likes?postId=...&userId=... (no body).
+   *   If that fails (some servers expect body on DELETE), retry with DELETE + JSON body.
+   */
   const handleLike = async () => {
     if (!session?.user?.id) {
       toast.error("Please sign in to like posts")
       return
     }
 
+    // Prevent double-click spamming by quick local guard (optional)
+    // We'll optimistically update UI after success, not before.
     try {
-      const response = await fetch("/api/forum/likes", {
-        method: isLiked ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId,
-          userId: session.user.id,
-        }),
-      })
+      if (!isLiked) {
+        // Like (POST)
+        const response = await fetch("/api/forum/likes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postId, userId: session.user.id }),
+        })
 
-      if (response.ok) {
-        setIsLiked(!isLiked)
-        setLikeCount(prev => (isLiked ? Math.max(0, prev - 1) : prev + 1))
+        if (response.ok) {
+          setIsLiked(true)
+          setLikeCount((prev) => prev + 1)
+        } else {
+          const text = await safeReadText(response)
+          console.error("Like failed:", response.status, text)
+          toast.error("Failed to like post")
+        }
       } else {
-        toast.error("Failed to update like")
+        // Unlike (DELETE) — try query param style first (no body)
+        const deleteUrl = `/api/forum/likes?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(session.user.id)}`
+        let response = await fetch(deleteUrl, { method: "DELETE" })
+
+        if (!response.ok) {
+          // If it failed, try DELETE with a JSON body (some servers accept body)
+          console.warn("DELETE without body failed, retrying with body", response.status)
+          try {
+            response = await fetch("/api/forum/likes", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ postId, userId: session.user.id }),
+            })
+          } catch (err) {
+            console.error("Retry DELETE with body threw:", err)
+            response = undefined as any
+          }
+        }
+
+        if (response && response.ok) {
+          setIsLiked(false)
+          setLikeCount((prev) => Math.max(0, prev - 1))
+        } else {
+          const status = response ? response.status : "no-response"
+          const text = response ? await safeReadText(response) : ""
+          console.error("Unlike failed:", status, text)
+          toast.error("Failed to unlike post")
+        }
       }
     } catch (error) {
-      console.error("handleLike error:", error)
+      console.error("handleLike unexpected error:", error)
       toast.error("Failed to update like")
+    }
+  }
+
+  // helper to safely read response text/json without throwing
+  const safeReadText = async (res: Response) => {
+    try {
+      const ct = res.headers.get("content-type")
+      if (ct && ct.includes("application/json")) {
+        const json = await res.json()
+        return JSON.stringify(json)
+      }
+      return await res.text()
+    } catch (e) {
+      return "<unreadable response>"
     }
   }
 
