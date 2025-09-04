@@ -1,7 +1,10 @@
+export const runtime = "nodejs"
+
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { writeFile } from "fs/promises"
 import { join } from "path"
+import os from "os"
 
 // Define types for pdfreader
 interface PdfItem {
@@ -45,27 +48,34 @@ export async function POST(request: NextRequest) {
     
     // Generate a unique filename
     const fileName = `${Date.now()}-${file.name}`
-    const path = join(process.cwd(), "uploads", fileName)
-    
-    // Save the file
-    await writeFile(path, buffer)
+
+    // Use the system temp dir (writable on Vercel)
+    const tmpPath = join(os.tmpdir(), fileName)
+
+    // OPTIONAL: save the file temporarily for debugging/processing.
+    // On Vercel, your project dir is read-only — only os.tmpdir() is writable.
+    try {
+      await writeFile(tmpPath, buffer)
+    } catch (err) {
+      // If write fails, continue — we can still parse from buffer directly.
+      console.warn("Failed to write temp file, continuing with in-memory buffer:", err)
+    }
     
     let extractedText = ""
     
     // Extract text based on file type
     if (file.type === "application/pdf") {
       try {
-        // Use pdfreader for PDF parsing with dynamic import
+        // Use pdfreader for PDF parsing with dynamic import (must run on Node runtime)
         const pdfreaderModule = await import("pdfreader")
         const PdfReader = pdfreaderModule.PdfReader
         
-        // Parse PDF and extract text
+        // Parse PDF and extract text (from buffer - no disk required)
         extractedText = await new Promise<string>((resolve, reject) => {
           let textContent = ""
           
           new PdfReader().parseBuffer(buffer, (err: PdfReaderError, item: PdfReaderItem) => {
             if (err) {
-              // Convert string error to Error object if needed
               if (typeof err === 'string') {
                 reject(new Error(err))
               } else {
@@ -93,6 +103,7 @@ export async function POST(request: NextRequest) {
       extractedText,
       originalName: file.name,
       fileType: file.type,
+      // NOTE: we intentionally don't return tmpPath in production (security). 
     })
   } catch (error) {
     console.error("Error uploading file:", error)
