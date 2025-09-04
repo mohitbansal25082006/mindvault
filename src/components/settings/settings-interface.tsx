@@ -115,18 +115,16 @@ export function SettingsInterface() {
         const updatedProfile = await response.json()
         setProfile(prev => ({ ...prev!, ...updatedProfile } as UserProfile))
         try {
-          // Update session user object if session update is available
-          if (update) {
-            await update({
-              ...session,
-              user: {
-                ...session?.user,
-                name: data.name,
-                email: data.email,
-                image: updatedProfile.image || session?.user?.image,
-              }
-            })
-          }
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              name: data.name,
+              email: data.email,
+              image: updatedProfile.image || session?.user?.image,
+            }
+          })
+          await update()
         } catch (err) {
           console.warn("session update error:", err)
         }
@@ -178,6 +176,14 @@ export function SettingsInterface() {
     } finally {
       setIsDeleting(false)
     }
+  }
+
+  const handleDeleteAccountClick = () => {
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false)
   }
 
   if (isLoading) {
@@ -383,6 +389,7 @@ export function SettingsInterface() {
                     <Button 
                       variant="destructive" 
                       size="sm"
+                      onClick={handleDeleteAccountClick}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete Account
@@ -425,8 +432,7 @@ export function SettingsInterface() {
                         </Alert>
                       )}
                       <DialogFooter>
-                        {/* IMPORTANT: set type="button" so this Cancel button DOES NOT submit the form */}
-                        <Button variant="outline" type="button" onClick={() => setIsDeleteDialogOpen(false)}>
+                        <Button type="button" variant="outline" onClick={handleCancelDelete}>
                           Cancel
                         </Button>
                         <Button 
@@ -449,5 +455,3 @@ export function SettingsInterface() {
     </div>
   )
 }
-
-export default SettingsInterface
