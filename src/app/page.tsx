@@ -75,6 +75,8 @@ export default function HomePage() {
               © 2025 MindVault. Built with Next.js 15, TypeScript & AI.
             </p>
             <div className="flex justify-center space-x-6">
+              <Link href="/features" className="text-gray-400 hover:text-white transition-colors">Features</Link>
+              <Link href="/docs" className="text-gray-400 hover:text-white transition-colors">Documentation</Link>
               <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy</Link>
               <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms</Link>
               <Link href="/support" className="text-gray-400 hover:text-white transition-colors">Support</Link>

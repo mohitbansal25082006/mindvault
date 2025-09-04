@@ -1,6 +1,9 @@
+"use client"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useSession } from "next-auth/react"
 import {
   ArrowLeft,
   Brain,
@@ -14,8 +17,12 @@ import {
   Lock,
   Users,
 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function FeaturesPage() {
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const { data: session } = useSession()
+  
   const features = [
     {
       title: "AI-Powered Knowledge Management",
@@ -98,7 +105,6 @@ export default function FeaturesPage() {
       bgColor: "bg-pink-500/10",
     },
   ]
-
   const testimonials = [
     {
       quote:
@@ -122,7 +128,15 @@ export default function FeaturesPage() {
       avatar: "ER",
     },
   ]
-
+  const handleGetStarted = () => {
+    if (session) {
+      // If user is logged in, navigate to documents/new
+      window.location.href = "/documents/new"
+    } else {
+      // If user is not logged in, show login prompt
+      setShowLoginPrompt(true)
+    }
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -135,7 +149,7 @@ export default function FeaturesPage() {
             </Button>
           </Link>
         </div>
-
+        
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
@@ -147,7 +161,7 @@ export default function FeaturesPage() {
             and interact with your knowledge.
           </p>
         </div>
-
+        
         {/* Features Grid */}
         <div className="mb-20">
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -171,7 +185,7 @@ export default function FeaturesPage() {
             ))}
           </div>
         </div>
-
+        
         {/* Testimonials */}
         <div className="mb-20">
           <div className="text-center mb-12">
@@ -183,7 +197,6 @@ export default function FeaturesPage() {
               MindVault
             </p>
           </div>
-
           <div className="grid gap-8 md:grid-cols-3">
             {testimonials.map((testimonial, index) => (
               <Card
@@ -213,7 +226,7 @@ export default function FeaturesPage() {
             ))}
           </div>
         </div>
-
+        
         {/* CTA Section */}
         <div className="text-center">
           <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-white/10 rounded-xl p-8 max-w-3xl mx-auto">
@@ -225,11 +238,13 @@ export default function FeaturesPage() {
               organize and leverage their knowledge.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/documents/new">
-                <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-                  Get Started for Free
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                className="bg-indigo-600 hover:bg-indigo-700"
+                onClick={handleGetStarted}
+              >
+                Get Started for Free
+              </Button>
               <Link href="/support">
                 <Button
                   size="lg"
@@ -243,6 +258,31 @@ export default function FeaturesPage() {
           </div>
         </div>
       </div>
+      
+      {/* Login Prompt Dialog */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+        <DialogContent className="bg-black/80 border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Users className="h-5 w-5 text-indigo-400" />
+              Login Required
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300 mb-6">
+              You need to be logged in to access MindVault features. Please sign in to get started.
+            </p>
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => setShowLoginPrompt(false)}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Got it
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

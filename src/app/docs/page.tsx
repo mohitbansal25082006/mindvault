@@ -1,16 +1,19 @@
 "use client"
-
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Search, BookOpen, FileText, Users, Settings, MessageSquare, Brain, ChevronRight, Star, Clock } from "lucide-react"
-import { useState } from "react"
+import { useSession } from "next-auth/react"
+import { ArrowLeft, Search, BookOpen, FileText, Users, Settings, MessageSquare, Brain, Star, Clock } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function DocsPage() {
   const [searchQuery, setSearchQuery] = useState("")
-
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const { data: session } = useSession()
+  
   const documentation = [
     {
       category: "Getting Started",
@@ -107,7 +110,7 @@ export default function DocsPage() {
       ]
     }
   ]
-
+  
   const filteredDocumentation = documentation.map(category => ({
     ...category,
     articles: category.articles.filter(article =>
@@ -115,19 +118,27 @@ export default function DocsPage() {
       article.description.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })).filter(category => category.articles.length > 0)
-
+  
   const popularArticles = [
     { title: "Getting Started with MindVault", slug: "getting-started", views: 12420 },
     { title: "How to Use AI Chat Effectively", slug: "ai-chat-effectively", views: 9840 },
     { title: "Document Organization Best Practices", slug: "document-organization", views: 8650 },
     { title: "Security and Privacy Settings", slug: "security-privacy", views: 7320 }
   ]
-
+  
   const recentUpdates = [
     { title: "New Collaboration Features", description: "Learn about our latest team collaboration tools", date: "2 days ago", type: "New Feature" },
     { title: "Improved Search Algorithm", description: "Our search is now 40% faster and more accurate", date: "1 week ago", type: "Improvement" },
     { title: "Mobile App Release", description: "MindVault is now available on iOS and Android", date: "2 weeks ago", type: "Release" }
   ]
+  
+  const handleJoinCommunity = () => {
+    if (session) {
+      window.location.href = "/forum"
+    } else {
+      setShowLoginPrompt(true)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900">
@@ -141,7 +152,7 @@ export default function DocsPage() {
             </Button>
           </Link>
         </div>
-
+        
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
@@ -150,7 +161,6 @@ export default function DocsPage() {
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
             Everything you need to know about using MindVault effectively
           </p>
-
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -162,7 +172,7 @@ export default function DocsPage() {
             />
           </div>
         </div>
-
+        
         <div className="grid gap-8 lg:grid-cols-4">
           {/* Main Content */}
           <div className="lg:col-span-3">
@@ -194,57 +204,59 @@ export default function DocsPage() {
                 </div>
               </CardContent>
             </Card>
-
+            
             {/* Documentation Categories */}
             <div className="space-y-8">
-              {filteredDocumentation.map((category, index) => (
-                <div key={index}>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-10 h-10 rounded-lg ${
-                      category.color === "text-indigo-400"
-                        ? "bg-indigo-500/10"
-                        : category.color === "text-purple-400"
-                        ? "bg-purple-500/10"
-                        : category.color === "text-green-400"
-                        ? "bg-green-500/10"
-                        : "bg-yellow-500/10"
-                    } flex items-center justify-center`}>
-                      <category.icon className={`h-5 w-5 ${category.color}`} />
+              {filteredDocumentation.length > 0 ? (
+                filteredDocumentation.map((category, index) => (
+                  <div key={index}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-10 h-10 rounded-lg ${
+                        category.color === "text-indigo-400"
+                          ? "bg-indigo-500/10"
+                          : category.color === "text-purple-400"
+                          ? "bg-purple-500/10"
+                          : category.color === "text-green-400"
+                          ? "bg-green-500/10"
+                          : "bg-yellow-500/10"
+                      } flex items-center justify-center`}>
+                        <category.icon className={`h-5 w-5 ${category.color}`} />
+                      </div>
+                      <h2 className="text-2xl font-bold text-white">{category.category}</h2>
                     </div>
-                    <h2 className="text-2xl font-bold text-white">{category.category}</h2>
-                  </div>
-
-                  <div className="grid gap-4">
-                    {category.articles.map((article, articleIndex) => (
-                      <Card
-                        key={articleIndex}
-                        className="bg-black/20 border-white/10 text-white hover:border-indigo-400/30 transition-all duration-300"
-                      >
-                        <CardContent className="pt-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h3 className="font-medium mb-1">{article.title}</h3>
-                              <p className="text-sm text-gray-300 mb-2">{article.description}</p>
-                              <div className="flex items-center gap-4 text-xs text-gray-400">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  <span>{article.time}</span>
+                    <div className="grid gap-4">
+                      {category.articles.map((article, articleIndex) => (
+                        <Card
+                          key={articleIndex}
+                          className="bg-black/20 border-white/10 text-white hover:border-indigo-400/30 transition-all duration-300"
+                        >
+                          <CardContent className="pt-6">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="font-medium mb-1">{article.title}</h3>
+                                <p className="text-sm text-gray-300 mb-2">{article.description}</p>
+                                <div className="flex items-center gap-4 text-xs text-gray-400">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{article.time}</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-300">No documentation found matching your search.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
-
+          
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Popular Articles */}
@@ -261,15 +273,12 @@ export default function DocsPage() {
                     <h4 className="font-medium text-sm mb-1">{article.title}</h4>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">{article.views.toLocaleString()} views</span>
-                      <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 p-0 h-6 w-6">
-                        <ChevronRight className="h-3 w-3" />
-                      </Button>
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
-
+            
             {/* Recent Updates */}
             <Card className="bg-black/20 border-white/10 text-white">
               <CardHeader>
@@ -293,7 +302,7 @@ export default function DocsPage() {
                 ))}
               </CardContent>
             </Card>
-
+            
             {/* Community */}
             <Card className="bg-black/20 border-white/10 text-white">
               <CardHeader>
@@ -305,13 +314,14 @@ export default function DocsPage() {
               <CardContent>
                 <p className="text-sm text-gray-300 mb-4">Join our community of users and developers</p>
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start border-white/20 text-white hover:bg-white/10" size="sm">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start border-white/20 text-white hover:bg-white/10" 
+                    size="sm"
+                    onClick={handleJoinCommunity}
+                  >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Community Forum
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start border-white/20 text-white hover:bg-white/10" size="sm">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Discord Server
                   </Button>
                 </div>
               </CardContent>
@@ -319,6 +329,31 @@ export default function DocsPage() {
           </div>
         </div>
       </div>
+      
+      {/* Login Prompt Dialog */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+        <DialogContent className="bg-black/80 border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Users className="h-5 w-5 text-indigo-400" />
+              Login Required
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300 mb-6">
+              You need to be logged in to join our community. Please sign in to access the forum.
+            </p>
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => setShowLoginPrompt(false)}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Got it
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
