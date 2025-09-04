@@ -1,14 +1,13 @@
 // E:\mindvault\src\components\forum\forum-post-detail.tsx
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ForumPost, ForumComment } from "@/types"
 import { 
   ArrowLeft, 
@@ -18,7 +17,6 @@ import {
   Pin, 
   Lock,
   Eye,
-  Clock,
   Edit3,
   Trash2,
   Send,
@@ -49,19 +47,11 @@ export function ForumPostDetail({ postId }: { postId: string }) {
   const [editCommentContent, setEditCommentContent] = useState("")
   const [isUpdatingComment, setIsUpdatingComment] = useState(false)
   const [deletingComment, setDeletingComment] = useState<string | null>(null)
-
   // New states for deleting post
   const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false)
   const [isDeletingPost, setIsDeletingPost] = useState(false)
 
-  useEffect(() => {
-    fetchPost()
-    fetchComments()
-    incrementViewCount()
-    // Re-run when session changes in case like state should be rechecked
-  }, [postId, session?.user?.id])
-
-  const fetchPost = async () => {
+  const fetchPost = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch(`/api/forum/posts/${postId}`)
@@ -98,9 +88,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [postId, session?.user?.id])
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const response = await fetch(`/api/forum/posts/${postId}/comments`)
       if (response.ok) {
@@ -113,9 +103,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       console.error("fetchComments error:", error)
       toast.error("Failed to load comments")
     }
-  }
+  }, [postId])
 
-  const incrementViewCount = async () => {
+  const incrementViewCount = useCallback(async () => {
     try {
       // Only increment if the user hasn't viewed this post recently
       const viewedPosts = JSON.parse(localStorage.getItem('viewedForumPosts') || '[]')
@@ -143,7 +133,14 @@ export function ForumPostDetail({ postId }: { postId: string }) {
     } catch (error) {
       console.error("Error incrementing view count:", error)
     }
-  }
+  }, [postId])
+
+  useEffect(() => {
+    fetchPost()
+    fetchComments()
+    incrementViewCount()
+    // Re-run when session changes in case like state should be rechecked
+  }, [fetchPost, fetchComments, incrementViewCount, session?.user?.id])
 
   /**
    * Robust like/unlike handler.
@@ -156,7 +153,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       toast.error("Please sign in to like posts")
       return
     }
-
     // Prevent double-click spamming by quick local guard (optional)
     // We'll optimistically update UI after success, not before.
     try {
@@ -167,7 +163,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ postId, userId: session.user.id }),
         })
-
         if (response.ok) {
           setIsLiked(true)
           setLikeCount((prev) => prev + 1)
@@ -180,7 +175,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
         // Unlike (DELETE) — try query param style first (no body)
         const deleteUrl = `/api/forum/likes?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(session.user.id)}`
         let response = await fetch(deleteUrl, { method: "DELETE" })
-
         if (!response.ok) {
           // If it failed, try DELETE with a JSON body (some servers accept body)
           console.warn("DELETE without body failed, retrying with body", response.status)
@@ -192,10 +186,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
             })
           } catch (err) {
             console.error("Retry DELETE with body threw:", err)
-            response = undefined as any
+            response = undefined as unknown as Response
           }
         }
-
         if (response && response.ok) {
           setIsLiked(false)
           setLikeCount((prev) => Math.max(0, prev - 1))
@@ -228,17 +221,14 @@ export function ForumPostDetail({ postId }: { postId: string }) {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!commentContent.trim()) {
       toast.error("Comment cannot be empty")
       return
     }
-
     if (!session?.user?.id) {
       toast.error("Please sign in to comment")
       return
     }
-
     setIsSubmittingComment(true)
     try {
       const response = await fetch(`/api/forum/posts/${postId}/comments`, {
@@ -249,7 +239,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           userId: session.user.id,
         }),
       })
-
       if (response.ok) {
         setCommentContent("")
         await fetchComments()
@@ -270,7 +259,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       toast.error("Please sign in to like comments")
       return
     }
-
     try {
       const comment = comments.find(c => c.id === commentId)
       const isCurrentlyLiked = comment?.isLiked || false
@@ -283,7 +271,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           userId: session.user.id,
         }),
       })
-
       if (response.ok) {
         // Update the comment in the local state
         setComments(comments.map(comment => {
@@ -324,7 +311,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       toast.error("Comment cannot be empty")
       return
     }
-
     setIsUpdatingComment(true)
     try {
       const response = await fetch(`/api/forum/comments/${editingComment}`, {
@@ -334,7 +320,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           content: editCommentContent.trim(),
         }),
       })
-
       if (response.ok) {
         setEditingComment(null)
         setEditCommentContent("")
@@ -365,12 +350,10 @@ export function ForumPostDetail({ postId }: { postId: string }) {
 
   const handleDeleteComment = async () => {
     if (!deletingComment) return
-
     try {
       const response = await fetch(`/api/forum/comments/${deletingComment}`, {
         method: "DELETE",
       })
-
       if (response.ok) {
         setComments(comments.filter(comment => comment.id !== deletingComment))
         setDeletingComment(null)
@@ -404,11 +387,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
       toast.error("Only the post author can delete this post")
       return
     }
-
     setIsDeletingPost(true)
     try {
       let response = await fetch(`/api/forum/posts/${postId}`, { method: "DELETE" })
-
       if (!response.ok) {
         // Retry with JSON body (some servers expect a body on DELETE)
         console.warn("Initial DELETE failed, retrying with body", response.status)
@@ -420,10 +401,9 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           })
         } catch (err) {
           console.error("Retry DELETE with body threw:", err)
-          response = undefined as any
+          response = undefined as unknown as Response
         }
       }
-
       if (response && response.ok) {
         toast.success("Post deleted successfully!")
         // Navigate back to forum list after deletion
@@ -445,10 +425,8 @@ export function ForumPostDetail({ postId }: { postId: string }) {
 
   const handleShare = async () => {
     if (!post) return
-
     const url = `${window.location.origin}/forum/post/${postId}`
     const title = `MindVault Forum: ${post.title ?? "Post"}`
-
     try {
       // Try Web Share API first (will only be available in some browsers / platforms)
       if (navigator.share && typeof navigator.share === "function") {
@@ -461,14 +439,12 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           console.warn("Web Share API failed or cancelled — falling back to clipboard", err)
         }
       }
-
       // Fallback: use Clipboard API if available
       if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
         await navigator.clipboard.writeText(url)
         toast.success("Link copied to clipboard!")
         return
       }
-
       // Last-resort fallback: create a temporary input and use execCommand
       const input = document.createElement("input")
       input.value = url
@@ -578,7 +554,6 @@ export function ForumPostDetail({ postId }: { postId: string }) {
                 <Share className="h-4 w-4 mr-1" />
                 Share
               </Button>
-
               {/* Only show delete post button if current user is the post author */}
               {isPostAuthor && (
                 <>
